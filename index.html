@@ -4,15 +4,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Maps Data Extractor</title>
+<title>Maps Extractor</title>
 
+<!-- ✅ PUT YOUR API KEY HERE -->
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCBe0av8z-eStU17dap_mYi5PaHGPhoED4&libraries=places&callback=initMap" async defer></script>
+
 <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
 
 <style>
 body {
     font-family: 'Segoe UI', sans-serif;
-    background: #f5f7fb;
+    background: #f4f6f9;
     margin: 0;
     padding: 30px;
 }
@@ -28,12 +30,11 @@ body {
     margin-bottom: 20px;
 }
 h2 {
-    margin: 0 0 10px;
+    margin-bottom: 10px;
 }
 .inputs {
     display: flex;
     gap: 10px;
-    flex-wrap: wrap;
 }
 input {
     flex: 1;
@@ -55,7 +56,6 @@ button.secondary {
 .status {
     margin-top: 10px;
     font-size: 14px;
-    color: #444;
 }
 table {
     width: 100%;
@@ -68,10 +68,6 @@ th, td {
 th {
     background: #1e6a3b;
     color: #fff;
-    text-align: left;
-}
-tr:hover {
-    background: #f9fbff;
 }
 </style>
 </head>
@@ -84,13 +80,13 @@ tr:hover {
 <h2>Maps Extractor</h2>
 
 <div class="inputs">
-<input type="text" id="keyword" placeholder="Enter keyword (e.g. dentist)">
-<input type="text" id="location" placeholder="Enter location (e.g. Delhi)">
+<input type="text" id="keyword" placeholder="Keyword (e.g. hotel)">
+<input type="text" id="location" placeholder="Location (e.g. Delhi)">
 <button onclick="searchPlaces()">Search</button>
 <button class="secondary" onclick="downloadExcel()">Download</button>
 </div>
 
-<div class="status" id="status">Ready</div>
+<div class="status" id="status">Loading API...</div>
 </div>
 
 <div class="card">
@@ -118,42 +114,63 @@ let map, service;
 let finalData = [];
 
 function initMap() {
-    map = new google.maps.Map(document.createElement("div"));
-    service = new google.maps.places.PlacesService(map);
+    try {
+        map = new google.maps.Map(document.createElement("div"));
+        service = new google.maps.places.PlacesService(map);
+
+        document.getElementById("status").innerText = "API Ready";
+        console.log("API loaded successfully");
+    } catch (e) {
+        document.getElementById("status").innerText = "API Load Failed";
+        console.error(e);
+    }
 }
 
 async function searchPlaces() {
+
+    if (!service) {
+        alert("API not loaded yet");
+        return;
+    }
+
     let keyword = document.getElementById("keyword").value.trim();
     let location = document.getElementById("location").value.trim();
 
-    if (!keyword) return alert("Enter keyword");
+    if (!keyword) {
+        alert("Enter keyword");
+        return;
+    }
 
     let query = keyword + (location ? " " + location : "");
 
     document.getElementById("status").innerText = "Searching...";
 
+    console.log("Query:", query);
+
     service.textSearch({ query: query }, async (results, status) => {
 
+        console.log("Status:", status);
+
         if (status !== google.maps.places.PlacesServiceStatus.OK) {
-            document.getElementById("status").innerText = "No results found";
+            document.getElementById("status").innerText = "Error: " + status;
             return;
         }
 
         let limited = results.slice(0, 20);
 
-        // ⚡ Parallel processing (FAST)
-        let promises = limited.map(place => getDetails(place.place_id));
+        let promises = limited.map(p => getDetails(p.place_id));
         let data = await Promise.all(promises);
 
         finalData = data.filter(x => x !== null);
         renderTable(finalData);
 
-        document.getElementById("status").innerText = "Results: " + finalData.length;
+        document.getElementById("status").innerText = "Found: " + finalData.length;
     });
 }
 
 function getDetails(placeId) {
     return new Promise(resolve => {
+
         service.getDetails({
             placeId: placeId,
             fields: ["name","formatted_address","formatted_phone_number","website"]
@@ -209,7 +226,10 @@ function renderTable(data) {
 }
 
 function downloadExcel() {
-    if (!finalData.length) return alert("No data");
+    if (!finalData.length) {
+        alert("No data");
+        return;
+    }
 
     let ws = XLSX.utils.json_to_sheet(finalData);
     let wb = XLSX.utils.book_new();
@@ -217,8 +237,34 @@ function downloadExcel() {
 
     XLSX.writeFile(wb, "maps_data.xlsx");
 }
+
+// 🔴 IMPORTANT ERROR HANDLER
+window.gm_authFailure = function() {
+    document.getElementById("status").innerText = "Invalid API Key";
+};
 </script>
 
 </body>
 </html>
 ```
+
+---
+
+# ✅ FINAL CHECKLIST (VERY IMPORTANT)
+
+✔ API key replace ki
+✔ File `.html` me save ki
+✔ Billing ON
+✔ Places API enabled
+
+---
+
+# 🔥 If still not working
+
+👉 Mujhe ye bhejo:
+
+* Console error (F12 → Console)
+* API key screenshot (masked)
+* Google Cloud API page screenshot
+
+Main exact issue pakad ke solve kar dunga 💯
