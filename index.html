@@ -1,121 +1,861 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Maps Extractor</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maps Extractor Pro</title>
 
+<!-- ✅ PASTE YOUR GOOGLE API KEY BELOW (replace YOUR_API_KEY) -->
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCBe0av8z-eStU17dap_mYi5PaHGPhoED4&libraries=places"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
 
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+
 <style>
-body{font-family:Segoe UI;background:#f5f7fb;padding:30px}
-.container{max-width:1100px;margin:auto}
-.card{background:#fff;padding:20px;border-radius:10px;box-shadow:0 4px 15px rgba(0,0,0,0.08);margin-bottom:20px}
-input{padding:10px;border:1px solid #ccc;border-radius:6px;width:30%}
-button{padding:10px 16px;border:none;background:#1e6a3b;color:#fff;border-radius:6px;cursor:pointer}
-table{width:100%;border-collapse:collapse}
-th,td{padding:10px;border-bottom:1px solid #eee}
-th{background:#1e6a3b;color:#fff}
+  :root {
+    --bg: #0d0f14;
+    --surface: #151820;
+    --surface2: #1c2030;
+    --border: #252a3a;
+    --accent: #00e5a0;
+    --accent2: #0090ff;
+    --text: #e8eaf0;
+    --muted: #6b7394;
+    --danger: #ff4d6d;
+    --warn: #ffb703;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Mono', monospace;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 24px;
+  }
+
+  /* Background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,229,160,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,160,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrap {
+    max-width: 1300px;
+    margin: auto;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Header */
+  header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 28px;
+  }
+
+  .logo-icon {
+    width: 44px; height: 44px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 10px;
+    display: grid; place-items: center;
+    font-size: 22px;
+  }
+
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+
+  h1 span { color: var(--accent); }
+
+  .badge {
+    margin-left: auto;
+    font-size: 11px;
+    background: rgba(0,229,160,0.1);
+    color: var(--accent);
+    border: 1px solid rgba(0,229,160,0.25);
+    padding: 4px 10px;
+    border-radius: 20px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  /* Search card */
+  .search-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 22px 24px;
+    margin-bottom: 20px;
+  }
+
+  .search-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+    min-width: 180px;
+  }
+
+  label {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  input, select {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  input:focus, select:focus {
+    border-color: var(--accent);
+  }
+
+  .btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #000;
+  }
+
+  .btn-primary:hover { background: #00ffb3; transform: translateY(-1px); }
+  .btn-primary:disabled { background: #1a3d2f; color: var(--muted); cursor: not-allowed; transform: none; }
+
+  .btn-outline {
+    background: transparent;
+    color: var(--accent2);
+    border: 1px solid var(--accent2);
+  }
+
+  .btn-outline:hover { background: rgba(0,144,255,0.1); }
+  .btn-outline:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* Stats bar */
+  .stats-bar {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+    align-items: center;
+  }
+
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 12px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .stat strong { color: var(--text); font-size: 14px; }
+
+  /* Progress */
+  .progress-wrap {
+    display: none;
+    margin-top: 12px;
+  }
+
+  .progress-label {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 6px;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .progress-bar {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 2px;
+    transition: width 0.3s;
+    width: 0%;
+  }
+
+  /* Table card */
+  .table-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+
+  .table-header {
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .table-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+  }
+
+  .search-filter {
+    padding: 7px 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    outline: none;
+    width: 200px;
+  }
+
+  .search-filter:focus { border-color: var(--accent); }
+
+  .table-scroll { overflow-x: auto; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+  }
+
+  thead th {
+    background: var(--surface2);
+    color: var(--muted);
+    text-align: left;
+    padding: 12px 14px;
+    font-size: 11px;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    position: sticky;
+    top: 0;
+    white-space: nowrap;
+  }
+
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+  }
+
+  tbody tr:hover { background: var(--surface2); }
+
+  td {
+    padding: 11px 14px;
+    color: var(--text);
+    vertical-align: middle;
+  }
+
+  .td-num { color: var(--muted); font-size: 11px; width: 36px; }
+
+  .td-name { font-weight: 500; max-width: 200px; }
+  .td-name small { display: block; color: var(--muted); font-size: 11px; margin-top: 2px; }
+
+  .td-addr { max-width: 200px; color: var(--muted); font-size: 12px; }
+
+  .td-phone a { color: var(--accent2); text-decoration: none; }
+  .td-phone a:hover { text-decoration: underline; }
+
+  .chip-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(0,144,255,0.12);
+    color: var(--accent2);
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-size: 11px;
+    text-decoration: none;
+    border: 1px solid rgba(0,144,255,0.2);
+  }
+
+  .chip-link:hover { background: rgba(0,144,255,0.2); }
+
+  .chip-email {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(0,229,160,0.1);
+    color: var(--accent);
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-size: 11px;
+    text-decoration: none;
+    border: 1px solid rgba(0,229,160,0.2);
+  }
+
+  .na { color: var(--muted); font-size: 11px; }
+
+  .stars { color: var(--warn); font-size: 12px; }
+  .rating-num { color: var(--muted); font-size: 11px; margin-left: 2px; }
+
+  /* Status pill */
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 9px;
+    border-radius: 20px;
+    font-size: 11px;
+  }
+
+  .status-open {
+    background: rgba(0,229,160,0.1);
+    color: var(--accent);
+    border: 1px solid rgba(0,229,160,0.2);
+  }
+
+  .status-closed {
+    background: rgba(255,77,109,0.1);
+    color: var(--danger);
+    border: 1px solid rgba(255,77,109,0.2);
+  }
+
+  .dot { width: 6px; height: 6px; border-radius: 50%; }
+  .dot-open { background: var(--accent); }
+  .dot-closed { background: var(--danger); }
+
+  /* Empty state */
+  .empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--muted);
+  }
+
+  .empty .icon { font-size: 40px; margin-bottom: 12px; }
+  .empty p { font-size: 13px; }
+
+  /* Pagination */
+  .pagination {
+    padding: 14px 20px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--muted);
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  /* More results button */
+  .more-btn-wrap {
+    padding: 14px 20px;
+    border-top: 1px solid var(--border);
+    text-align: center;
+    display: none;
+  }
+
+  .btn-more {
+    background: var(--surface2);
+    color: var(--accent);
+    border: 1px solid rgba(0,229,160,0.3);
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-more:hover { background: rgba(0,229,160,0.1); }
+  .btn-more:disabled { opacity: 0.4; cursor: not-allowed; }
 </style>
 </head>
-
 <body>
 
-<div class="container">
+<div class="wrap">
 
-<div class="card">
-<h3>Maps Extractor</h3>
+  <header>
+    <div class="logo-icon">🗺️</div>
+    <div>
+      <h1>Maps <span>Extractor</span> Pro</h1>
+    </div>
+    <div class="badge">v2.0</div>
+  </header>
 
-<input id="keyword" placeholder="Keyword">
-<input id="location" placeholder="Location">
-<button onclick="search()">Search</button>
-<button onclick="download()">Download</button>
+  <!-- Search Card -->
+  <div class="search-card">
+    <div class="search-row">
+      <div class="field">
+        <label>🔍 Keyword</label>
+        <input id="keyword" placeholder="e.g. restaurants, hotels, gym...">
+      </div>
+      <div class="field">
+        <label>📍 Location</label>
+        <input id="location" placeholder="e.g. Delhi, Mumbai, Pune">
+      </div>
+      <div class="field" style="max-width:140px">
+        <label>📊 Limit</label>
+        <select id="limit">
+          <option value="20">20 results</option>
+          <option value="40">40 results</option>
+          <option value="60" selected>60 results</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" id="searchBtn" onclick="startSearch()">⚡ Search</button>
+      <button class="btn btn-outline" id="dlBtn" onclick="download()" disabled>⬇ Export Excel</button>
+    </div>
 
-<p id="status">Checking API...</p>
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-label">
+        <span id="progressText">Fetching results...</span>
+        <span id="progressPct">0%</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-bar" id="statsBar" style="display:none">
+    <div class="stat">Total Found <strong id="statTotal">0</strong></div>
+    <div class="stat">With Phone <strong id="statPhone">0</strong></div>
+    <div class="stat">With Website <strong id="statWeb">0</strong></div>
+    <div class="stat">With Email <strong id="statEmail">0</strong></div>
+    <div class="stat" id="statPageWrap">Page <strong id="statPage">1/1</strong></div>
+  </div>
+
+  <!-- Table -->
+  <div class="table-card">
+    <div class="table-header">
+      <div class="table-title">Extracted Results</div>
+      <input class="search-filter" id="filterInput" placeholder="🔍 Filter table..." oninput="filterTable()" style="display:none">
+    </div>
+
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Business Name</th>
+            <th>Address</th>
+            <th>Phone</th>
+            <th>Rating</th>
+            <th>Status</th>
+            <th>Website</th>
+            <th>Email (Guessed)</th>
+          </tr>
+        </thead>
+        <tbody id="data">
+          <tr>
+            <td colspan="8">
+              <div class="empty">
+                <div class="icon">🗺️</div>
+                <p>Enter keyword & location, then click Search</p>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="more-btn-wrap" id="moreBtnWrap">
+      <button class="btn-more" id="moreBtn" onclick="loadMorePage()">Load Next 20 →</button>
+    </div>
+
+    <div class="pagination" id="pagination" style="display:none">
+      <span id="paginationInfo">Showing 0 of 0</span>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-outline" onclick="prevPage()" id="prevBtn" style="padding:6px 12px;font-size:12px">← Prev</button>
+        <button class="btn btn-outline" onclick="nextPage()" id="nextBtn" style="padding:6px 12px;font-size:12px">Next →</button>
+      </div>
+    </div>
+  </div>
+
 </div>
 
-<div class="card">
-<table>
-<thead>
-<tr>
-<th>#</th>
-<th>Name</th>
-<th>Address</th>
-<th>Phone</th>
-<th>Website</th>
-<th>Email</th>
-</tr>
-</thead>
-<tbody id="data">
-<tr><td colspan="6">No data</td></tr>
-</tbody>
-</table>
-</div>
-
-</div>
 <script>
-async function search() {
+// =============================================
+// CONFIG
+// =============================================
+let service = null;
+let allData = [];
+let filteredData = [];
+let nextPageToken = null;
+let maxResults = 60;
+let currentPage = 1;
+const PAGE_SIZE = 15;
 
-    if (!service) {
-        alert("API not ready");
-        return;
+// =============================================
+// API INIT
+// =============================================
+function initAPI() {
+  if (window.google && google.maps && google.maps.places) {
+    service = new google.maps.places.PlacesService(document.createElement("div"));
+  } else {
+    setTimeout(initAPI, 800);
+  }
+}
+initAPI();
+
+// =============================================
+// SEARCH
+// =============================================
+async function startSearch() {
+  if (!service) return alert("Google Maps API is still loading. Please wait a moment.");
+
+  let keyword = document.getElementById("keyword").value.trim();
+  let location = document.getElementById("location").value.trim();
+  maxResults = parseInt(document.getElementById("limit").value);
+
+  if (!keyword) return alert("Please enter a keyword");
+
+  let query = keyword + (location ? " in " + location : "");
+
+  // Reset
+  allData = [];
+  nextPageToken = null;
+  currentPage = 1;
+
+  setBtn("searchBtn", true, "⏳ Searching...");
+  document.getElementById("dlBtn").disabled = true;
+  document.getElementById("data").innerHTML = `<tr><td colspan="8"><div class="empty"><div class="icon">⏳</div><p>Fetching data...</p></div></td></tr>`;
+  document.getElementById("statsBar").style.display = "none";
+  document.getElementById("filterInput").style.display = "none";
+  document.getElementById("pagination").style.display = "none";
+  document.getElementById("moreBtnWrap").style.display = "none";
+
+  showProgress(true);
+  setProgress(5, "Starting search...");
+
+  try {
+    // Page 1
+    let page1 = await textSearch(query, null);
+    nextPageToken = page1.token;
+    let details1 = await fetchDetails(page1.results, 5, 40);
+    allData = allData.concat(details1);
+    renderTable();
+
+    // Page 2 (if needed and token available)
+    if (allData.length < maxResults && nextPageToken) {
+      setProgress(45, "Loading more results...");
+      await wait(2000); // Google requires 2s delay between pages
+      let page2 = await textSearch(query, nextPageToken);
+      nextPageToken = page2.token;
+      let details2 = await fetchDetails(page2.results, 45, 75);
+      allData = allData.concat(details2);
+      renderTable();
     }
 
-    let keyword = document.getElementById("keyword").value.trim();
-    let location = document.getElementById("location").value.trim();
-
-    if (!keyword) return alert("Enter keyword");
-
-    let query = keyword + (location ? " " + location : "");
-
-    document.getElementById("status").innerText = "Searching...";
-
-    let allResults = [];
-
-    function fetchPage(request, page = 1) {
-
-        service.textSearch(request, (results, status, pagination) => {
-
-            if (status !== google.maps.places.PlacesServiceStatus.OK) {
-                document.getElementById("status").innerText = "Error: " + status;
-                return;
-            }
-
-            allResults = allResults.concat(results);
-
-            document.getElementById("status").innerText =
-                "Loaded page " + page + " (" + allResults.length + " results)";
-
-            // 🔥 NEXT PAGE (MAX 3 PAGES)
-            if (pagination && pagination.hasNextPage) {
-                setTimeout(() => {
-                    pagination.nextPage();
-                }, 2000); // required delay
-            } else {
-                processResults(allResults);
-            }
-        });
+    // Page 3 (if needed and token available)
+    if (allData.length < maxResults && nextPageToken) {
+      setProgress(75, "Fetching final batch...");
+      await wait(2000);
+      let page3 = await textSearch(query, nextPageToken);
+      nextPageToken = null;
+      let details3 = await fetchDetails(page3.results, 75, 98);
+      allData = allData.concat(details3);
     }
 
-    fetchPage({ query: query });
+    // Trim to limit
+    allData = allData.slice(0, maxResults);
+    setProgress(100, "Done!");
+
+    setTimeout(() => {
+      showProgress(false);
+      renderTable();
+      updateStats();
+      setBtn("searchBtn", false, "⚡ Search");
+      document.getElementById("dlBtn").disabled = false;
+      document.getElementById("filterInput").style.display = "block";
+      document.getElementById("statsBar").style.display = "flex";
+    }, 600);
+
+  } catch(e) {
+    showProgress(false);
+    setBtn("searchBtn", false, "⚡ Search");
+    document.getElementById("data").innerHTML = `<tr><td colspan="8"><div class="empty"><div class="icon">❌</div><p>Error: ${e.message}</p></div></td></tr>`;
+  }
 }
 
-async function processResults(results) {
+// =============================================
+// GOOGLE PLACES API CALLS
+// =============================================
+function textSearch(query, pageToken) {
+  return new Promise((resolve, reject) => {
+    let req = { query };
+    if (pageToken) req.pageToken = pageToken;
 
-    document.getElementById("status").innerText = "Fetching details...";
+    service.textSearch(req, (results, status, pagination) => {
+      if (status !== google.maps.places.PlacesServiceStatus.OK && status !== "ZERO_RESULTS") {
+        return reject(new Error("Places API: " + status));
+      }
+      resolve({
+        results: results || [],
+        token: pagination && pagination.hasNextPage ? pagination : null
+      });
+    });
+  });
+}
 
-    let promises = results.map(p => getDetails(p.place_id));
-    let data = await Promise.all(promises);
+function loadMorePage() {
+  // handled via textSearch pagination
+}
 
-    finalData = data.filter(x => x);
-    render(finalData);
+async function fetchDetails(results, progStart, progEnd) {
+  let out = [];
+  for (let i = 0; i < results.length; i++) {
+    let pct = progStart + Math.round((i / results.length) * (progEnd - progStart));
+    setProgress(pct, `Getting details ${allData.length + i + 1}...`);
+    let d = await getDetails(results[i].place_id);
+    if (d) out.push(d);
+  }
+  return out;
+}
 
-    document.getElementById("status").innerText =
-        "Done: " + finalData.length + " results";
+function getDetails(id) {
+  return new Promise(resolve => {
+    service.getDetails({
+      placeId: id,
+      fields: [
+        "name", "formatted_address", "formatted_phone_number",
+        "website", "rating", "user_ratings_total",
+        "opening_hours", "types", "international_phone_number"
+      ]
+    }, (r, s) => {
+      if (s !== "OK") return resolve(null);
+
+      let email = "N/A";
+      if (r.website) {
+        try {
+          let domain = new URL(r.website).hostname.replace(/^www\./, "");
+          // Common email patterns
+          email = "info@" + domain;
+        } catch {}
+      }
+
+      let open = null;
+      if (r.opening_hours) {
+        open = r.opening_hours.isOpen ? r.opening_hours.isOpen() : null;
+      }
+
+      let type = (r.types && r.types.length > 0)
+        ? r.types[0].replace(/_/g, " ")
+        : "";
+
+      resolve({
+        name: r.name,
+        type: type,
+        address: r.formatted_address || "N/A",
+        phone: r.formatted_phone_number || r.international_phone_number || "N/A",
+        website: r.website || "",
+        email: email,
+        rating: r.rating || null,
+        reviews: r.user_ratings_total || 0,
+        isOpen: open
+      });
+    });
+  });
+}
+
+// =============================================
+// RENDER
+// =============================================
+function renderTable() {
+  filteredData = [...allData];
+  currentPage = 1;
+  renderPage();
+}
+
+function filterTable() {
+  let q = document.getElementById("filterInput").value.toLowerCase();
+  filteredData = allData.filter(d =>
+    [d.name, d.address, d.phone, d.email, d.website].some(v => v && v.toLowerCase().includes(q))
+  );
+  currentPage = 1;
+  renderPage();
+}
+
+function renderPage() {
+  let start = (currentPage - 1) * PAGE_SIZE;
+  let end = start + PAGE_SIZE;
+  let page = filteredData.slice(start, end);
+  let totalPages = Math.ceil(filteredData.length / PAGE_SIZE);
+
+  if (!filteredData.length) {
+    document.getElementById("data").innerHTML = `<tr><td colspan="8"><div class="empty"><div class="icon">🔍</div><p>No matching results</p></div></td></tr>`;
+    document.getElementById("pagination").style.display = "none";
+    return;
+  }
+
+  let html = "";
+  page.forEach((d, i) => {
+    let globalIdx = start + i + 1;
+    let starsHtml = d.rating
+      ? `<span class="stars">${"★".repeat(Math.round(d.rating))}</span><span class="rating-num">${d.rating} (${d.reviews})</span>`
+      : `<span class="na">—</span>`;
+
+    let statusHtml = d.isOpen === true
+      ? `<span class="status-pill status-open"><span class="dot dot-open"></span>Open</span>`
+      : d.isOpen === false
+      ? `<span class="status-pill status-closed"><span class="dot dot-closed"></span>Closed</span>`
+      : `<span class="na">—</span>`;
+
+    let webHtml = d.website
+      ? `<a class="chip-link" href="${d.website}" target="_blank">🔗 Visit</a>`
+      : `<span class="na">—</span>`;
+
+    let emailHtml = d.email !== "N/A"
+      ? `<a class="chip-email" href="mailto:${d.email}">✉ ${d.email}</a>`
+      : `<span class="na">—</span>`;
+
+    let phoneHtml = d.phone !== "N/A"
+      ? `<a href="tel:${d.phone}">${d.phone}</a>`
+      : `<span class="na">—</span>`;
+
+    html += `<tr>
+      <td class="td-num">${globalIdx}</td>
+      <td class="td-name">${esc(d.name)}<small>${esc(d.type)}</small></td>
+      <td class="td-addr">${esc(d.address)}</td>
+      <td class="td-phone">${phoneHtml}</td>
+      <td>${starsHtml}</td>
+      <td>${statusHtml}</td>
+      <td>${webHtml}</td>
+      <td>${emailHtml}</td>
+    </tr>`;
+  });
+
+  document.getElementById("data").innerHTML = html;
+
+  // Pagination
+  let pag = document.getElementById("pagination");
+  if (filteredData.length > PAGE_SIZE) {
+    pag.style.display = "flex";
+    document.getElementById("paginationInfo").textContent =
+      `Showing ${start + 1}–${Math.min(end, filteredData.length)} of ${filteredData.length}`;
+    document.getElementById("prevBtn").disabled = currentPage <= 1;
+    document.getElementById("nextBtn").disabled = currentPage >= totalPages;
+    document.getElementById("statPage").textContent = `${currentPage}/${totalPages}`;
+    document.getElementById("statPageWrap").style.display = "flex";
+  } else {
+    pag.style.display = "none";
+    document.getElementById("statPageWrap").style.display = "none";
+  }
+}
+
+function prevPage() { if (currentPage > 1) { currentPage--; renderPage(); } }
+function nextPage() {
+  let totalPages = Math.ceil(filteredData.length / PAGE_SIZE);
+  if (currentPage < totalPages) { currentPage++; renderPage(); }
+}
+
+// =============================================
+// STATS
+// =============================================
+function updateStats() {
+  document.getElementById("statTotal").textContent = allData.length;
+  document.getElementById("statPhone").textContent = allData.filter(d => d.phone !== "N/A").length;
+  document.getElementById("statWeb").textContent = allData.filter(d => d.website).length;
+  document.getElementById("statEmail").textContent = allData.filter(d => d.email !== "N/A").length;
+}
+
+// =============================================
+// EXPORT
+// =============================================
+function download() {
+  if (!allData.length) return alert("No data to export");
+
+  let rows = allData.map((d, i) => ({
+    "#": i + 1,
+    "Business Name": d.name,
+    "Category": d.type,
+    "Address": d.address,
+    "Phone": d.phone,
+    "Rating": d.rating || "",
+    "Reviews": d.reviews || "",
+    "Open Now": d.isOpen === true ? "Yes" : d.isOpen === false ? "No" : "",
+    "Website": d.website,
+    "Email (Guessed)": d.email
+  }));
+
+  let ws = XLSX.utils.json_to_sheet(rows);
+
+  // Column widths
+  ws["!cols"] = [
+    {wch:4},{wch:28},{wch:18},{wch:36},{wch:18},
+    {wch:8},{wch:10},{wch:10},{wch:35},{wch:35}
+  ];
+
+  let wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Maps Data");
+
+  let fname = `maps_${document.getElementById("keyword").value}_${new Date().toISOString().slice(0,10)}.xlsx`;
+  XLSX.writeFile(wb, fname);
+}
+
+// =============================================
+// UTILS
+// =============================================
+function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function esc(str) {
+  if (!str) return "";
+  return str.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+function setBtn(id, disabled, text) {
+  let b = document.getElementById(id);
+  b.disabled = disabled;
+  b.textContent = text;
+}
+
+function showProgress(show) {
+  document.getElementById("progressWrap").style.display = show ? "block" : "none";
+}
+
+function setProgress(pct, text) {
+  document.getElementById("progressFill").style.width = pct + "%";
+  document.getElementById("progressText").textContent = text;
+  document.getElementById("progressPct").textContent = pct + "%";
 }
 </script>
-
-
 </body>
 </html>
-
