@@ -53,27 +53,11 @@ th{background:#1e6a3b;color:#fff}
 </div>
 
 </div>
-
 <script>
-let service = null;
-let finalData = [];
-
-function checkAPI() {
-    if (window.google && google.maps && google.maps.places) {
-        service = new google.maps.places.PlacesService(document.createElement("div"));
-        document.getElementById("status").innerText = "API Ready";
-    } else {
-        document.getElementById("status").innerText = "Loading API...";
-        setTimeout(checkAPI, 1000);
-    }
-}
-
-checkAPI();
-
 async function search() {
 
     if (!service) {
-        alert("API still loading. Check console.");
+        alert("API not ready");
         return;
     }
 
@@ -86,75 +70,51 @@ async function search() {
 
     document.getElementById("status").innerText = "Searching...";
 
-    service.textSearch({ query: query }, async (results, status) => {
+    let allResults = [];
 
-        if (status !== google.maps.places.PlacesServiceStatus.OK) {
-            document.getElementById("status").innerText = "Error: " + status;
-            console.error(status);
-            return;
-        }
+    function fetchPage(request, page = 1) {
 
-        let promises = results.slice(0,20).map(p => getDetails(p.place_id));
-        let data = await Promise.all(promises);
+        service.textSearch(request, (results, status, pagination) => {
 
-        finalData = data.filter(x=>x);
-        render(finalData);
-
-        document.getElementById("status").innerText = "Found: " + finalData.length;
-    });
-}
-
-function getDetails(id) {
-    return new Promise(resolve=>{
-        service.getDetails({
-            placeId:id,
-            fields:["name","formatted_address","formatted_phone_number","website"]
-        },(r,s)=>{
-            if(s!=="OK") return resolve(null);
-
-            let email="";
-            if(r.website){
-                try{
-                    let d=new URL(r.website).hostname.replace("www.","");
-                    email="contact@"+d;
-                }catch{}
+            if (status !== google.maps.places.PlacesServiceStatus.OK) {
+                document.getElementById("status").innerText = "Error: " + status;
+                return;
             }
 
-            resolve({
-                name:r.name,
-                address:r.formatted_address,
-                phone:r.formatted_phone_number||"N/A",
-                website:r.website||"-",
-                email:email||"N/A"
-            });
+            allResults = allResults.concat(results);
+
+            document.getElementById("status").innerText =
+                "Loaded page " + page + " (" + allResults.length + " results)";
+
+            // 🔥 NEXT PAGE (MAX 3 PAGES)
+            if (pagination && pagination.hasNextPage) {
+                setTimeout(() => {
+                    pagination.nextPage();
+                }, 2000); // required delay
+            } else {
+                processResults(allResults);
+            }
         });
-    });
+    }
+
+    fetchPage({ query: query });
 }
 
-function render(data){
-    let html="";
-    data.forEach((d,i)=>{
-        html+=`<tr>
-        <td>${i+1}</td>
-        <td>${d.name}</td>
-        <td>${d.address}</td>
-        <td>${d.phone}</td>
-        <td>${d.website!=="-"?`<a href="${d.website}" target="_blank">Visit</a>`:"-"}</td>
-        <td>${d.email}</td>
-        </tr>`;
-    });
-    document.getElementById("data").innerHTML=html||"<tr><td colspan='6'>No data</td></tr>";
-}
+async function processResults(results) {
 
-function download(){
-    if(!finalData.length) return alert("No data");
+    document.getElementById("status").innerText = "Fetching details...";
 
-    let ws=XLSX.utils.json_to_sheet(finalData);
-    let wb=XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb,ws,"Data");
-    XLSX.writeFile(wb,"maps.xlsx");
+    let promises = results.map(p => getDetails(p.place_id));
+    let data = await Promise.all(promises);
+
+    finalData = data.filter(x => x);
+    render(finalData);
+
+    document.getElementById("status").innerText =
+        "Done: " + finalData.length + " results";
 }
 </script>
+
 
 </body>
 </html>
