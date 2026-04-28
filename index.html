@@ -5,69 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Maps Extractor</title>
 
-<!-- ✅ PUT YOUR API KEY HERE -->
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCBe0av8z-eStU17dap_mYi5PaHGPhoED4&libraries=places&callback=initMap" async defer></script>
-
 <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
 
 <style>
-body {
-    font-family: 'Segoe UI', sans-serif;
-    background: #f4f6f9;
-    margin: 0;
-    padding: 30px;
-}
-.container {
-    max-width: 1200px;
-    margin: auto;
-}
-.card {
-    background: #fff;
-    padding: 20px;
-    border-radius: 10px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-    margin-bottom: 20px;
-}
-h2 {
-    margin-bottom: 10px;
-}
-.inputs {
-    display: flex;
-    gap: 10px;
-}
-input {
-    flex: 1;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-}
-button {
-    padding: 10px 18px;
-    border: none;
-    background: #1e6a3b;
-    color: #fff;
-    border-radius: 6px;
-    cursor: pointer;
-}
-button.secondary {
-    background: #2c5a7a;
-}
-.status {
-    margin-top: 10px;
-    font-size: 14px;
-}
-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-th, td {
-    padding: 10px;
-    border-bottom: 1px solid #eee;
-}
-th {
-    background: #1e6a3b;
-    color: #fff;
-}
+body {font-family:Segoe UI;background:#f4f6f9;padding:30px;}
+.container {max-width:1100px;margin:auto;}
+.card {background:#fff;padding:20px;border-radius:10px;box-shadow:0 4px 15px rgba(0,0,0,0.08);margin-bottom:20px;}
+.inputs {display:flex;gap:10px;}
+input {flex:1;padding:10px;border:1px solid #ccc;border-radius:6px;}
+button {padding:10px 16px;border:none;border-radius:6px;background:#1e6a3b;color:#fff;cursor:pointer;}
+button:disabled {background:#999;cursor:not-allowed;}
+table {width:100%;border-collapse:collapse;}
+th,td {padding:10px;border-bottom:1px solid #eee;}
+th {background:#1e6a3b;color:#fff;}
 </style>
 </head>
 
@@ -79,13 +30,13 @@ th {
 <h2>Maps Extractor</h2>
 
 <div class="inputs">
-<input type="text" id="keyword" placeholder="Keyword (e.g. hotel)">
-<input type="text" id="location" placeholder="Location (e.g. Delhi)">
-<button onclick="searchPlaces()">Search</button>
-<button class="secondary" onclick="downloadExcel()">Download</button>
+<input id="keyword" placeholder="Keyword (hotel, dentist)">
+<input id="location" placeholder="Location (Delhi, Mumbai)">
+<button id="searchBtn" disabled>Search</button>
+<button onclick="downloadExcel()">Download</button>
 </div>
 
-<div class="status" id="status">Loading API...</div>
+<p id="status">Loading API...</p>
 </div>
 
 <div class="card">
@@ -113,54 +64,37 @@ let map, service;
 let finalData = [];
 
 function initMap() {
-    try {
-        map = new google.maps.Map(document.createElement("div"));
-        service = new google.maps.places.PlacesService(map);
+    map = new google.maps.Map(document.createElement("div"));
+    service = new google.maps.places.PlacesService(map);
 
-        document.getElementById("status").innerText = "API Ready";
-        console.log("API loaded successfully");
-    } catch (e) {
-        document.getElementById("status").innerText = "API Load Failed";
-        console.error(e);
-    }
+    document.getElementById("status").innerText = "API Ready";
+    document.getElementById("searchBtn").disabled = false;
 }
 
-async function searchPlaces() {
+document.getElementById("searchBtn").addEventListener("click", searchPlaces);
 
-    if (!service) {
-        alert("API not loaded yet");
-        return;
-    }
+async function searchPlaces() {
 
     let keyword = document.getElementById("keyword").value.trim();
     let location = document.getElementById("location").value.trim();
 
-    if (!keyword) {
-        alert("Enter keyword");
-        return;
-    }
+    if (!keyword) return alert("Enter keyword");
 
     let query = keyword + (location ? " " + location : "");
 
     document.getElementById("status").innerText = "Searching...";
 
-    console.log("Query:", query);
-
     service.textSearch({ query: query }, async (results, status) => {
-
-        console.log("Status:", status);
 
         if (status !== google.maps.places.PlacesServiceStatus.OK) {
             document.getElementById("status").innerText = "Error: " + status;
             return;
         }
 
-        let limited = results.slice(0, 20);
-
-        let promises = limited.map(p => getDetails(p.place_id));
+        let promises = results.slice(0,20).map(p => getDetails(p.place_id));
         let data = await Promise.all(promises);
 
-        finalData = data.filter(x => x !== null);
+        finalData = data.filter(x => x);
         renderTable(finalData);
 
         document.getElementById("status").innerText = "Found: " + finalData.length;
@@ -169,7 +103,6 @@ async function searchPlaces() {
 
 function getDetails(placeId) {
     return new Promise(resolve => {
-
         service.getDetails({
             placeId: placeId,
             fields: ["name","formatted_address","formatted_phone_number","website"]
@@ -207,28 +140,19 @@ function renderTable(data) {
         return;
     }
 
-    let html = "";
-
-    data.forEach((d,i)=>{
-        html += `
-        <tr>
-        <td>${i+1}</td>
-        <td>${d.name}</td>
-        <td>${d.address}</td>
-        <td>${d.phone}</td>
-        <td>${d.website !== "-" ? `<a href="${d.website}" target="_blank">Visit</a>` : "-"}</td>
-        <td>${d.email}</td>
-        </tr>`;
-    });
-
-    body.innerHTML = html;
+    body.innerHTML = data.map((d,i)=>`
+    <tr>
+    <td>${i+1}</td>
+    <td>${d.name}</td>
+    <td>${d.address}</td>
+    <td>${d.phone}</td>
+    <td>${d.website !== "-" ? `<a href="${d.website}" target="_blank">Visit</a>` : "-"}</td>
+    <td>${d.email}</td>
+    </tr>`).join("");
 }
 
 function downloadExcel() {
-    if (!finalData.length) {
-        alert("No data");
-        return;
-    }
+    if (!finalData.length) return alert("No data");
 
     let ws = XLSX.utils.json_to_sheet(finalData);
     let wb = XLSX.utils.book_new();
@@ -237,7 +161,7 @@ function downloadExcel() {
     XLSX.writeFile(wb, "maps_data.xlsx");
 }
 
-//  IMPORTANT ERROR HANDLER
+// API error
 window.gm_authFailure = function() {
     document.getElementById("status").innerText = "Invalid API Key";
 };
@@ -245,4 +169,3 @@ window.gm_authFailure = function() {
 
 </body>
 </html>
-
