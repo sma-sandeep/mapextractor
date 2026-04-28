@@ -1,24 +1,22 @@
+```html
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Maps Extractor</title>
 
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCBe0av8z-eStU17dap_mYi5PaHGPhoED4&libraries=places&callback=initMap" async defer></script>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCBe0av8z-eStU17dap_mYi5PaHGPhoED4&libraries=places"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
 
 <style>
-body {font-family:Segoe UI;background:#f4f6f9;padding:30px;}
-.container {max-width:1100px;margin:auto;}
-.card {background:#fff;padding:20px;border-radius:10px;box-shadow:0 4px 15px rgba(0,0,0,0.08);margin-bottom:20px;}
-.inputs {display:flex;gap:10px;}
-input {flex:1;padding:10px;border:1px solid #ccc;border-radius:6px;}
-button {padding:10px 16px;border:none;border-radius:6px;background:#1e6a3b;color:#fff;cursor:pointer;}
-button:disabled {background:#999;cursor:not-allowed;}
-table {width:100%;border-collapse:collapse;}
-th,td {padding:10px;border-bottom:1px solid #eee;}
-th {background:#1e6a3b;color:#fff;}
+body{font-family:Segoe UI;background:#f5f7fb;padding:30px}
+.container{max-width:1100px;margin:auto}
+.card{background:#fff;padding:20px;border-radius:10px;box-shadow:0 4px 15px rgba(0,0,0,0.08);margin-bottom:20px}
+input{padding:10px;border:1px solid #ccc;border-radius:6px;width:30%}
+button{padding:10px 16px;border:none;background:#1e6a3b;color:#fff;border-radius:6px;cursor:pointer}
+table{width:100%;border-collapse:collapse}
+th,td{padding:10px;border-bottom:1px solid #eee}
+th{background:#1e6a3b;color:#fff}
 </style>
 </head>
 
@@ -27,16 +25,14 @@ th {background:#1e6a3b;color:#fff;}
 <div class="container">
 
 <div class="card">
-<h2>Maps Extractor</h2>
+<h3>Maps Extractor</h3>
 
-<div class="inputs">
-<input id="keyword" placeholder="Keyword (hotel, dentist)">
-<input id="location" placeholder="Location (Delhi, Mumbai)">
-<button id="searchBtn" disabled>Search</button>
-<button onclick="downloadExcel()">Download</button>
-</div>
+<input id="keyword" placeholder="Keyword">
+<input id="location" placeholder="Location">
+<button onclick="search()">Search</button>
+<button onclick="download()">Download</button>
 
-<p id="status">Loading API...</p>
+<p id="status">Checking API...</p>
 </div>
 
 <div class="card">
@@ -51,7 +47,7 @@ th {background:#1e6a3b;color:#fff;}
 <th>Email</th>
 </tr>
 </thead>
-<tbody id="tableBody">
+<tbody id="data">
 <tr><td colspan="6">No data</td></tr>
 </tbody>
 </table>
@@ -60,20 +56,27 @@ th {background:#1e6a3b;color:#fff;}
 </div>
 
 <script>
-let map, service;
+let service = null;
 let finalData = [];
 
-function initMap() {
-    map = new google.maps.Map(document.createElement("div"));
-    service = new google.maps.places.PlacesService(map);
-
-    document.getElementById("status").innerText = "API Ready";
-    document.getElementById("searchBtn").disabled = false;
+function checkAPI() {
+    if (window.google && google.maps && google.maps.places) {
+        service = new google.maps.places.PlacesService(document.createElement("div"));
+        document.getElementById("status").innerText = "API Ready";
+    } else {
+        document.getElementById("status").innerText = "Loading API...";
+        setTimeout(checkAPI, 1000);
+    }
 }
 
-document.getElementById("searchBtn").addEventListener("click", searchPlaces);
+checkAPI();
 
-async function searchPlaces() {
+async function search() {
+
+    if (!service) {
+        alert("API still loading. Check console.");
+        return;
+    }
 
     let keyword = document.getElementById("keyword").value.trim();
     let location = document.getElementById("location").value.trim();
@@ -88,84 +91,72 @@ async function searchPlaces() {
 
         if (status !== google.maps.places.PlacesServiceStatus.OK) {
             document.getElementById("status").innerText = "Error: " + status;
+            console.error(status);
             return;
         }
 
         let promises = results.slice(0,20).map(p => getDetails(p.place_id));
         let data = await Promise.all(promises);
 
-        finalData = data.filter(x => x);
-        renderTable(finalData);
+        finalData = data.filter(x=>x);
+        render(finalData);
 
         document.getElementById("status").innerText = "Found: " + finalData.length;
     });
 }
 
-function getDetails(placeId) {
-    return new Promise(resolve => {
+function getDetails(id) {
+    return new Promise(resolve=>{
         service.getDetails({
-            placeId: placeId,
-            fields: ["name","formatted_address","formatted_phone_number","website"]
-        }, (res, status) => {
+            placeId:id,
+            fields:["name","formatted_address","formatted_phone_number","website"]
+        },(r,s)=>{
+            if(s!=="OK") return resolve(null);
 
-            if (status !== google.maps.places.PlacesServiceStatus.OK) {
-                resolve(null);
-                return;
-            }
-
-            let email = "";
-            if (res.website) {
-                try {
-                    let domain = new URL(res.website).hostname.replace("www.","");
-                    email = "contact@" + domain;
-                } catch {}
+            let email="";
+            if(r.website){
+                try{
+                    let d=new URL(r.website).hostname.replace("www.","");
+                    email="contact@"+d;
+                }catch{}
             }
 
             resolve({
-                name: res.name,
-                address: res.formatted_address,
-                phone: res.formatted_phone_number || "N/A",
-                website: res.website || "-",
-                email: email || "N/A"
+                name:r.name,
+                address:r.formatted_address,
+                phone:r.formatted_phone_number||"N/A",
+                website:r.website||"-",
+                email:email||"N/A"
             });
         });
     });
 }
 
-function renderTable(data) {
-    let body = document.getElementById("tableBody");
-
-    if (!data.length) {
-        body.innerHTML = "<tr><td colspan='6'>No data</td></tr>";
-        return;
-    }
-
-    body.innerHTML = data.map((d,i)=>`
-    <tr>
-    <td>${i+1}</td>
-    <td>${d.name}</td>
-    <td>${d.address}</td>
-    <td>${d.phone}</td>
-    <td>${d.website !== "-" ? `<a href="${d.website}" target="_blank">Visit</a>` : "-"}</td>
-    <td>${d.email}</td>
-    </tr>`).join("");
+function render(data){
+    let html="";
+    data.forEach((d,i)=>{
+        html+=`<tr>
+        <td>${i+1}</td>
+        <td>${d.name}</td>
+        <td>${d.address}</td>
+        <td>${d.phone}</td>
+        <td>${d.website!=="-"?`<a href="${d.website}" target="_blank">Visit</a>`:"-"}</td>
+        <td>${d.email}</td>
+        </tr>`;
+    });
+    document.getElementById("data").innerHTML=html||"<tr><td colspan='6'>No data</td></tr>";
 }
 
-function downloadExcel() {
-    if (!finalData.length) return alert("No data");
+function download(){
+    if(!finalData.length) return alert("No data");
 
-    let ws = XLSX.utils.json_to_sheet(finalData);
-    let wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Data");
-
-    XLSX.writeFile(wb, "maps_data.xlsx");
+    let ws=XLSX.utils.json_to_sheet(finalData);
+    let wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,ws,"Data");
+    XLSX.writeFile(wb,"maps.xlsx");
 }
-
-// API error
-window.gm_authFailure = function() {
-    document.getElementById("status").innerText = "Invalid API Key";
-};
 </script>
 
 </body>
 </html>
+```
