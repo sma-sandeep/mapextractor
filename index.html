@@ -4,41 +4,96 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Google Maps Extractor Pro</title>
+<title>Maps Data Extractor</title>
 
-<!-- ✅ FIXED API SCRIPT -->
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCBe0av8z-eStU17dap_mYi5PaHGPhoED4&libraries=places&callback=initMap" async defer></script>
-
 <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
 
 <style>
-body{font-family:Arial;padding:20px;background:#f4f6f9}
-input,select,button{padding:10px;margin:5px;border-radius:6px;border:1px solid #ccc}
-button{cursor:pointer;background:#1e6a3b;color:#fff;border:none}
-table{width:100%;border-collapse:collapse;margin-top:20px;background:#fff}
-th,td{padding:10px;border:1px solid #ddd;text-align:left}
-th{background:#1e6a3b;color:#fff}
+body {
+    font-family: 'Segoe UI', sans-serif;
+    background: #f5f7fb;
+    margin: 0;
+    padding: 30px;
+}
+.container {
+    max-width: 1200px;
+    margin: auto;
+}
+.card {
+    background: #fff;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    margin-bottom: 20px;
+}
+h2 {
+    margin: 0 0 10px;
+}
+.inputs {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+input {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+}
+button {
+    padding: 10px 18px;
+    border: none;
+    background: #1e6a3b;
+    color: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+}
+button.secondary {
+    background: #2c5a7a;
+}
+.status {
+    margin-top: 10px;
+    font-size: 14px;
+    color: #444;
+}
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+th, td {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+}
+th {
+    background: #1e6a3b;
+    color: #fff;
+    text-align: left;
+}
+tr:hover {
+    background: #f9fbff;
+}
 </style>
 </head>
 
 <body>
 
-<h2>Google Maps Extractor</h2>
+<div class="container">
 
-<input type="text" id="searchKeyword" placeholder="Keyword (e.g. cafe)">
-<input type="text" id="locationInput" placeholder="Location (optional)">
-<select id="radiusSelect">
-<option value="500">500m</option>
-<option value="1000">1km</option>
-<option value="2000">2km</option>
-<option value="5000">5km</option>
-</select>
+<div class="card">
+<h2>Maps Extractor</h2>
 
-<button onclick="performExtraction()">Extract</button>
-<button onclick="exportToExcel()">Download Excel</button>
+<div class="inputs">
+<input type="text" id="keyword" placeholder="Enter keyword (e.g. dentist)">
+<input type="text" id="location" placeholder="Enter location (e.g. Delhi)">
+<button onclick="searchPlaces()">Search</button>
+<button class="secondary" onclick="downloadExcel()">Download</button>
+</div>
 
-<p id="statusText">Loading API...</p>
+<div class="status" id="status">Ready</div>
+</div>
 
+<div class="card">
 <table>
 <thead>
 <tr>
@@ -51,135 +106,96 @@ th{background:#1e6a3b;color:#fff}
 </tr>
 </thead>
 <tbody id="tableBody">
-<tr><td colspan="6">No Data</td></tr>
+<tr><td colspan="6">No data</td></tr>
 </tbody>
 </table>
+</div>
+
+</div>
 
 <script>
-let map, geocoder, placesService;
-let extractedPlacesData = [];
-let userCoords = null;
+let map, service;
+let finalData = [];
 
 function initMap() {
-    map = new google.maps.Map(document.createElement("div"), {
-        center: { lat: 28.6139, lng: 77.2090 },
-        zoom: 10
-    });
-
-    geocoder = new google.maps.Geocoder();
-    placesService = new google.maps.places.PlacesService(map);
-
-    document.getElementById("statusText").innerHTML = "✅ API Ready";
-
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(pos => {
-            userCoords = {
-                lat: pos.coords.latitude,
-                lng: pos.coords.longitude
-            };
-        });
-    }
+    map = new google.maps.Map(document.createElement("div"));
+    service = new google.maps.places.PlacesService(map);
 }
 
-async function getSearchCenter() {
-    let loc = document.getElementById("locationInput").value.trim();
-
-    if (loc !== "") {
-        return new Promise(resolve => {
-            geocoder.geocode({ address: loc }, (res, status) => {
-                if (status === "OK") {
-                    resolve({
-                        lat: res[0].geometry.location.lat(),
-                        lng: res[0].geometry.location.lng(),
-                        name: loc
-                    });
-                } else {
-                    resolve({ lat: 28.6139, lng: 77.2090, name: "Default Delhi" });
-                }
-            });
-        });
-    } else if (userCoords) {
-        return { lat: userCoords.lat, lng: userCoords.lng, name: "Your Location" };
-    } else {
-        return { lat: 28.6139, lng: 77.2090, name: "Default Delhi" };
-    }
-}
-
-async function performExtraction() {
-    let keyword = document.getElementById("searchKeyword").value.trim();
-    let radius = parseInt(document.getElementById("radiusSelect").value);
+async function searchPlaces() {
+    let keyword = document.getElementById("keyword").value.trim();
+    let location = document.getElementById("location").value.trim();
 
     if (!keyword) return alert("Enter keyword");
 
-    let center = await getSearchCenter();
+    let query = keyword + (location ? " " + location : "");
 
-    document.getElementById("statusText").innerHTML = "🔍 Searching...";
+    document.getElementById("status").innerText = "Searching...";
 
-    placesService.nearbySearch({
-        location: new google.maps.LatLng(center.lat, center.lng),
-        radius: radius,
-        keyword: keyword
-    }, async (results, status) => {
+    service.textSearch({ query: query }, async (results, status) => {
 
         if (status !== google.maps.places.PlacesServiceStatus.OK) {
-            document.getElementById("statusText").innerHTML = "❌ No results";
+            document.getElementById("status").innerText = "No results found";
             return;
         }
 
-        let finalData = [];
+        let limited = results.slice(0, 20);
 
-        for (let place of results) {
+        // ⚡ Parallel processing (FAST)
+        let promises = limited.map(place => getDetails(place.place_id));
+        let data = await Promise.all(promises);
 
-            let details = await new Promise(resolve => {
-                placesService.getDetails({
-                    placeId: place.place_id,
-                    fields: ["name","formatted_address","formatted_phone_number","website"]
-                }, (res, stat) => {
-
-                    if (stat === google.maps.places.PlacesServiceStatus.OK) {
-
-                        let email = "";
-                        if (res.website) {
-                            try {
-                                let domain = new URL(res.website).hostname.replace("www.","");
-                                email = "contact@" + domain;
-                            } catch {}
-                        }
-
-                        resolve({
-                            name: res.name,
-                            address: res.formatted_address,
-                            phone: res.formatted_phone_number || "N/A",
-                            website: res.website || "-",
-                            email: email || "N/A"
-                        });
-
-                    } else resolve(null);
-                });
-            });
-
-            if (details) finalData.push(details);
-        }
-
-        extractedPlacesData = finalData;
+        finalData = data.filter(x => x !== null);
         renderTable(finalData);
 
-        document.getElementById("statusText").innerHTML = "✅ Found " + finalData.length + " results";
+        document.getElementById("status").innerText = "Results: " + finalData.length;
+    });
+}
+
+function getDetails(placeId) {
+    return new Promise(resolve => {
+        service.getDetails({
+            placeId: placeId,
+            fields: ["name","formatted_address","formatted_phone_number","website"]
+        }, (res, status) => {
+
+            if (status !== google.maps.places.PlacesServiceStatus.OK) {
+                resolve(null);
+                return;
+            }
+
+            let email = "";
+            if (res.website) {
+                try {
+                    let domain = new URL(res.website).hostname.replace("www.","");
+                    email = "contact@" + domain;
+                } catch {}
+            }
+
+            resolve({
+                name: res.name,
+                address: res.formatted_address,
+                phone: res.formatted_phone_number || "N/A",
+                website: res.website || "-",
+                email: email || "N/A"
+            });
+        });
     });
 }
 
 function renderTable(data) {
-    let tbody = document.getElementById("tableBody");
+    let body = document.getElementById("tableBody");
 
     if (!data.length) {
-        tbody.innerHTML = "<tr><td colspan='6'>No Data</td></tr>";
+        body.innerHTML = "<tr><td colspan='6'>No data</td></tr>";
         return;
     }
 
     let html = "";
 
     data.forEach((d,i)=>{
-        html += `<tr>
+        html += `
+        <tr>
         <td>${i+1}</td>
         <td>${d.name}</td>
         <td>${d.address}</td>
@@ -189,13 +205,13 @@ function renderTable(data) {
         </tr>`;
     });
 
-    tbody.innerHTML = html;
+    body.innerHTML = html;
 }
 
-function exportToExcel() {
-    if (!extractedPlacesData.length) return alert("No data");
+function downloadExcel() {
+    if (!finalData.length) return alert("No data");
 
-    let ws = XLSX.utils.json_to_sheet(extractedPlacesData);
+    let ws = XLSX.utils.json_to_sheet(finalData);
     let wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Data");
 
