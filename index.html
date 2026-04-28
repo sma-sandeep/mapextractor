@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>Google Maps Extractor Pro | Nearby Places Search</title>
-    <!-- Google Maps API (Places + Geocoding + Maps) -->
+    <!-- Google Maps API with YOUR key -->
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCBe0av8z-eStU17dap_mYi5PaHGPhoED4&libraries=places,geocoding&callback=initMap" async defer></script>
     <!-- SheetJS (XLSX export) -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
@@ -29,7 +29,6 @@
             margin: 0 auto;
         }
 
-        /* Header & card */
         .glass-card {
             background: rgba(255, 255, 255, 0.94);
             backdrop-filter: blur(2px);
@@ -38,7 +37,6 @@
             padding: 24px 30px;
             margin-bottom: 28px;
             border: 1px solid rgba(255,255,255,0.6);
-            transition: all 0.2s;
         }
 
         h1 {
@@ -136,16 +134,6 @@
             transform: translateY(-2px);
         }
 
-        .btn-outline {
-            background: white;
-            border: 1.5px solid #2c7a45;
-            color: #1e6a3b;
-        }
-
-        .btn-outline:hover {
-            background: #eef5e9;
-        }
-
         .btn-download {
             background: #2c5a7a;
             color: white;
@@ -162,11 +150,6 @@
             padding: 10px 16px;
             border-radius: 40px;
             display: inline-block;
-        }
-
-        .status-badge {
-            color: #156b3a;
-            font-weight: 500;
         }
 
         .results-wrapper {
@@ -210,14 +193,6 @@
             font-style: italic;
         }
 
-        .badge-location {
-            background: #e9ecef;
-            border-radius: 40px;
-            padding: 4px 12px;
-            font-size: 0.75rem;
-            font-weight: 500;
-        }
-
         footer {
             text-align: center;
             margin-top: 35px;
@@ -237,7 +212,7 @@
 <div class="main-container">
     <div class="glass-card">
         <h1><i class="fas fa-map-marker-alt"></i> Google Maps Extractor <span style="font-size: 1rem; background: none; color:#2c7a45;">| Places + Contacts</span></h1>
-        <div class="sub">🔍 Search businesses, restaurants, services → extract Name, Address, Phone, Website, Email (simulated + enhanced)</div>
+        <div class="sub">🔍 Search businesses, restaurants, services → extract Name, Address, Phone, Website, Email</div>
 
         <div class="search-panel">
             <div class="input-group">
@@ -245,8 +220,8 @@
                 <input type="text" id="searchKeyword" placeholder="e.g., Pizza, Clinic, Hotel, Car repair" value="Coffee shop">
             </div>
             <div class="input-group">
-                <label><i class="fas fa-location-dot"></i> Location (city/area or 'near me')</label>
-                <input type="text" id="locationInput" placeholder="e.g., New York, London, or leave empty for auto-detect">
+                <label><i class="fas fa-location-dot"></i> Location (city/area or leave empty for 'near me')</label>
+                <input type="text" id="locationInput" placeholder="e.g., New York, Mumbai, London">
             </div>
             <div class="input-group">
                 <label><i class="fas fa-arrows-up-down"></i> Radius (meters)</label>
@@ -259,12 +234,12 @@
             </div>
             <div class="btn-group">
                 <button class="btn btn-primary" id="searchBtn"><i class="fas fa-map-pin"></i> Extract Places</button>
-                <button class="btn btn-download" id="downloadBtn" disabled><i class="fas fa-file-excel"></i> Download CSV/Excel</button>
+                <button class="btn btn-download" id="downloadBtn" disabled><i class="fas fa-file-excel"></i> Download Excel</button>
             </div>
         </div>
 
         <div class="info-status" id="statusArea">
-            <i class="fas fa-info-circle"></i> <span id="statusText">Ready. Use a valid Google Maps API key & click Extract.</span>
+            <i class="fas fa-info-circle"></i> <span id="statusText">Initializing Google Maps API...</span>
         </div>
         <div id="locationHint" style="font-size: 0.75rem; margin-top: 8px;"></div>
     </div>
@@ -272,7 +247,14 @@
     <div class="results-wrapper">
         <table id="resultTable">
             <thead>
-                <tr><th>#</th><th>Business Name</th><th>Address</th><th>Phone Number</th><th>Website</th><th>Email (Enriched)</th></tr>
+                <tr>
+                    <th>#</th>
+                    <th>Business Name</th>
+                    <th>Address</th>
+                    <th>Phone Number</th>
+                    <th>Website</th>
+                    <th>Email (Derived)</th>
+                </tr>
             </thead>
             <tbody id="tableBody">
                 <tr class="no-data"><td colspan="6">✨ No data yet. Search for places near you or selected location.</td></tr>
@@ -280,99 +262,97 @@
         </table>
     </div>
     <footer>
-        <i class="fas fa-globe"></i> Powered by Google Places API | Emails derived from website / domain heuristic (Place details + web scraping simulation) 
-        <span style="display: block; margin-top: 4px;">✅ Works with valid API key & enabled Places API, Geocoding API.</span>
+        <i class="fas fa-globe"></i> Powered by Google Places API | Email derived from website domain
     </footer>
 </div>
 
 <script>
-    // ------------------------------------------------------------------
-    //  GLOBAL VARIABLES
-    // ------------------------------------------------------------------
-    let map;                // not strictly required but used for geocoder ref
+    // GLOBAL VARIABLES
     let geocoder;
     let placesService;
-    let extractedPlacesData = [];        // store final results for export
-    let lastSearchCenter = null;          // {lat, lng}
+    let extractedPlacesData = [];
     let currentKeyword = "";
-    
-    // API key will be replaced by user in the script url above? We'll read and warn.
-    // Actually we need to extract API key from script url or ask user to paste.
-    // But more robust: We'll check the existing script src key. Provide a fallback instruction.
-    // We'll implement a function getApiKeyFromUrl or we let user set via prompt? To be user-friendly:
-    // Many users will replace "YOUR_API_KEY_HERE" in the script src. We'll detect if placeholder remains.
-    
-    function getGoogleApiKey() {
-        // Extract from script tags (the one we loaded with maps api)
+    let isApiReady = false;
+
+    // Function to check if API key is valid (not placeholder)
+    function isApiKeyValid() {
+        // Get the API key from script tag
         const scripts = document.getElementsByTagName('script');
         for (let script of scripts) {
             if (script.src && script.src.includes('maps.googleapis.com/maps/api/js')) {
                 const match = script.src.match(/key=([^&]*)/);
-                if (match && match[1]) return match[1];
+                if (match && match[1]) {
+                    const key = match[1];
+                    // Check if it's not the placeholder
+                    if (key !== "YOUR_API_KEY_HERE" && key !== "AIzaSyCBe0av8z-eStU17dap_mYi5PaHGPhoED4") {
+                        return true;
+                    }
+                }
             }
         }
-        return null;
+        return false;
     }
 
-    let API_KEY = getGoogleApiKey();
-    if (!API_KEY || API_KEY === "AIzaSyCBe0av8z-eStU17dap_mYi5PaHGPhoED4") {
-        // Instead of breaking, show error and give interactive replacement.
-        const statusSpan = document.getElementById('statusText');
-        statusSpan.innerHTML = "⚠️ Invalid Google Maps API Key. Replace 'YOUR_API_KEY_HERE' in script src with your actual API key (enable Places, Geocoding).";
-        statusSpan.style.color = "#b91c1c";
-        document.getElementById('searchBtn').disabled = true;
-        document.getElementById('downloadBtn').disabled = true;
-    } else {
-        // Enabled when API ready.
-        console.log("API Key detected, waiting for initMap");
-    }
-
-    // initMap callback globally for Google Maps
+    // Initialize map services
     window.initMap = function() {
-        if (!API_KEY || API_KEY === "AIzaSyCBe0av8z-eStU17dap_mYi5PaHGPhoED4") return;
-        geocoder = new google.maps.Geocoder();
-        // We don't need map display but PlacesService requires a HTML div or map instance? 
-        // Actually PlacesService requires a map or div? For textSearch and nearbySearch we can use new google.maps.places.PlacesService(attachedDiv)
-        // Create a dummy div element to instantiate PlacesService.
-        const dummyDiv = document.createElement('div');
-        placesService = new google.maps.places.PlacesService(dummyDiv);
-        console.log("PlacesService ready");
-        document.getElementById('statusText').innerHTML = "✅ API ready. Enter search & location → Extract Places.";
-        document.getElementById('searchBtn').disabled = false;
-        // Also try auto detect location on load
-        autoDetectLocation();
+        console.log("initMap called");
+        
+        if (!isApiKeyValid()) {
+            document.getElementById('statusText').innerHTML = "⚠️ Please replace the API key in the script tag with your actual Google Maps API key";
+            document.getElementById('statusText').style.color = "#b91c1c";
+            document.getElementById('searchBtn').disabled = true;
+            return;
+        }
+        
+        try {
+            geocoder = new google.maps.Geocoder();
+            const dummyDiv = document.createElement('div');
+            placesService = new google.maps.places.PlacesService(dummyDiv);
+            isApiReady = true;
+            
+            document.getElementById('statusText').innerHTML = "✅ API Ready! Enter search details and click Extract Places.";
+            document.getElementById('statusText').style.color = "#156b3a";
+            document.getElementById('searchBtn').disabled = false;
+            
+            // Auto-detect location
+            autoDetectLocation();
+        } catch (error) {
+            console.error("Error initializing:", error);
+            document.getElementById('statusText').innerHTML = "❌ Error loading Google Maps. Check API key and enabled APIs.";
+            document.getElementById('statusText').style.color = "#b91c1c";
+        }
     };
 
-    // Auto detect user's current location to fill "near me"
+    // Auto detect user's location
     function autoDetectLocation() {
         if (!navigator.geolocation) return;
+        
         navigator.geolocation.getCurrentPosition((position) => {
             const lat = position.coords.latitude;
             const lng = position.coords.longitude;
-            // Reverse geocode to display city/area name
+            
             if (geocoder) {
                 geocoder.geocode({ location: { lat, lng } }, (results, status) => {
                     if (status === 'OK' && results[0]) {
                         let address = results[0].formatted_address;
-                        document.getElementById('locationHint').innerHTML = `<i class="fas fa-map-marker-alt"></i> 📍 Detected your current location: ${address.substring(0, 60)}`;
-                        document.getElementById('locationInput').placeholder = "Use current location or type area";
+                        document.getElementById('locationHint').innerHTML = `<i class="fas fa-map-marker-alt"></i> 📍 Current location detected: ${address.substring(0, 60)}`;
+                        document.getElementById('locationInput').placeholder = "Or type custom location";
                     } else {
-                        document.getElementById('locationHint').innerHTML = `<i class="fas fa-location-dot"></i> Detected lat: ${lat.toFixed(4)}, lng: ${lng.toFixed(4)} (Nearby will use this)`;
+                        document.getElementById('locationHint').innerHTML = `<i class="fas fa-location-dot"></i> Location detected (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
                     }
                 });
             }
-            // store for later "auto near me"
             window.userCoords = { lat, lng };
         }, (err) => {
-            console.warn("Geolocation error", err);
-            document.getElementById('locationHint').innerHTML = "<i class='fas fa-exclamation-triangle'></i> Enable location for 'near me' or type city manually.";
+            console.log("Geolocation not enabled or error");
+            document.getElementById('locationHint').innerHTML = "<i class='fas fa-info-circle'></i> Enter location or enable GPS for 'near me'";
         });
     }
 
-    // Helper: get location coordinate either by typed address or fallback to user geolocation
+    // Get search center coordinates
     async function getSearchCenter() {
         const locationText = document.getElementById('locationInput').value.trim();
-        // if user typed something, geocode it
+        
         if (locationText !== "") {
             return new Promise((resolve) => {
                 geocoder.geocode({ address: locationText }, (results, status) => {
@@ -380,162 +360,114 @@
                         const loc = results[0].geometry.location;
                         resolve({ lat: loc.lat(), lng: loc.lng(), locationName: locationText });
                     } else {
-                        console.warn("Geocode failed for typed location, fallback to default");
-                        // Fallback to NYC (example central)
-                        resolve({ lat: 40.7128, lng: -74.0060, locationName: "New York (fallback)" });
+                        resolve({ lat: 40.7128, lng: -74.0060, locationName: "New York (Default)" });
                     }
                 });
             });
         } else {
-            // no text: use browser geolocation if available, else default
             if (window.userCoords) {
-                return { lat: window.userCoords.lat, lng: window.userCoords.lng, locationName: "Current Location" };
+                return { lat: window.userCoords.lat, lng: window.userCoords.lng, locationName: "Your Current Location" };
             } else {
-                // wait for geolocation promise
                 return new Promise((resolve) => {
                     if (navigator.geolocation) {
                         navigator.geolocation.getCurrentPosition((pos) => {
                             window.userCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-                            resolve({ lat: window.userCoords.lat, lng: window.userCoords.lng, locationName: "Near Me (Auto)" });
+                            resolve({ lat: window.userCoords.lat, lng: window.userCoords.lng, locationName: "Your Location" });
                         }, () => {
-                            resolve({ lat: 40.7128, lng: -74.0060, locationName: "Default NYC" });
+                            resolve({ lat: 40.7128, lng: -74.0060, locationName: "New York (Default)" });
                         });
                     } else {
-                        resolve({ lat: 40.7128, lng: -74.0060, locationName: "Default NYC" });
+                        resolve({ lat: 40.7128, lng: -74.0060, locationName: "New York (Default)" });
                     }
                 });
             }
         }
     }
 
-    // Enrich email: try to get from place details or derive from website domain
-    async function enrichEmailFromPlace(placeId, websiteUrl) {
-        return new Promise((resolve) => {
-            if (!placesService) return resolve("");
-            placesService.getDetails({ placeId: placeId, fields: ['website', 'formatted_phone_number', 'name'] }, (place, status) => {
-                if (status === google.maps.places.PlacesServiceStatus.OK && place) {
-                    // Some places may have `international_phone_number` but rarely email.
-                    // Heuristic: if website exists, try to extract contact email by domain (synthetic, but in real scrape would need proxy)
-                    let derivedEmail = "";
-                    if (place.website) {
-                        let domain = new URL(place.website).hostname.replace('www.', '');
-                        // Common pattern: info@domain, contact@domain, hello@domain
-                        derivedEmail = `contact@${domain}`;
-                        // For better realism, we also try to check if any email listed? places API doesn't return email normally.
-                        // However we will simulate with smart guess, plus user can export as lead.
-                        // Additionally some places have `user_ratings_total` no email. 
-                        // We'll try to see 'email' in html_attributions? no.
-                    }
-                    // Sometimes we can also check other fields, but email rarely official. So we show derived suggestion.
-                    resolve(derivedEmail);
-                } else {
-                    if (websiteUrl && websiteUrl !== "") {
-                        try {
-                            let domain = new URL(websiteUrl).hostname.replace('www.', '');
-                            resolve(`info@${domain}`);
-                        } catch(e) { resolve(""); }
-                    } else resolve("");
-                }
-            });
-        });
-    }
-
-    // Main extraction: nearby search based on keyword, radius and center
+    // Main extraction function
     async function performExtraction() {
-        if (!placesService) {
-            alert("PlacesService not initialized. Check API key.");
+        if (!isApiReady || !placesService) {
+            alert("Please wait for API to load completely.");
             return;
         }
+        
         const keyword = document.getElementById('searchKeyword').value.trim();
         if (!keyword) {
-            alert("Please enter a search keyword (e.g., Pizza, Dentist)");
+            alert("Please enter a search keyword");
             return;
         }
+        
         currentKeyword = keyword;
         const radius = parseInt(document.getElementById('radiusSelect').value);
-        
-        // update status
         const statusSpan = document.getElementById('statusText');
-        statusSpan.innerHTML = `<i class="fas fa-spinner fa-pulse"></i> Searching for "${keyword}" ...`;
+        statusSpan.innerHTML = `<i class="fas fa-spinner fa-pulse"></i> Searching for "${keyword}"...`;
         
         let center = await getSearchCenter();
-        lastSearchCenter = center;
         const locationLatLng = new google.maps.LatLng(center.lat, center.lng);
-        
-        // show location info
-        document.getElementById('locationHint').innerHTML = `<i class="fas fa-location-crosshairs"></i> Searching near: ${center.locationName} (${center.lat.toFixed(4)}, ${center.lng.toFixed(4)})`;
+        document.getElementById('locationHint').innerHTML = `<i class="fas fa-location-crosshairs"></i> Searching near: ${center.locationName}`;
         
         const request = {
             location: locationLatLng,
             radius: radius,
-            keyword: keyword,
-            type: 'establishment'   // broader
+            keyword: keyword
         };
         
         placesService.nearbySearch(request, async (results, status) => {
             if (status !== google.maps.places.PlacesServiceStatus.OK || !results || results.length === 0) {
                 statusSpan.innerHTML = `⚠️ No places found for "${keyword}" near ${center.locationName}. Try different keyword or radius.`;
-                document.getElementById('tableBody').innerHTML = `<tr class="no-data"><td colspan="6">😞 No results. Try another category or increase radius.</td></tr>`;
+                document.getElementById('tableBody').innerHTML = '<tr class="no-data"><td colspan="6">😞 No results found.</td></tr>';
                 extractedPlacesData = [];
                 document.getElementById('downloadBtn').disabled = true;
                 return;
             }
             
-            // limit to first 25 to avoid rate limit & performance
-            const placesList = results.slice(0, 28);
-            statusSpan.innerHTML = `📡 Fetching details for ${placesList.length} places... Please wait.`;
+            const placesList = results.slice(0, 25);
+            statusSpan.innerHTML = `📡 Fetching details for ${placesList.length} places...`;
             let enrichedResults = [];
             
             for (let idx = 0; idx < placesList.length; idx++) {
                 const place = placesList[idx];
-                let phone = place.vicinity || ""; // temporarily
-                let website = "";
-                let emailGuessed = "";
-                let fullAddress = place.vicinity || "Address not available";
-                let name = place.name || "Unnamed";
                 
-                // fetch detailed place info (phone & website)
-                const detailPromise = new Promise((resolveDetail) => {
-                    placesService.getDetails({ placeId: place.place_id, fields: ['formatted_phone_number', 'website', 'formatted_address', 'name'] }, (details, detStatus) => {
+                const detailInfo = await new Promise((resolveDetail) => {
+                    placesService.getDetails({ 
+                        placeId: place.place_id, 
+                        fields: ['formatted_phone_number', 'website', 'formatted_address', 'name'] 
+                    }, (details, detStatus) => {
+                        let phone = "N/A";
+                        let website = "";
+                        let emailGuessed = "";
+                        let fullAddress = place.vicinity || "Address not available";
+                        let name = place.name || "Unnamed";
+                        
                         if (detStatus === google.maps.places.PlacesServiceStatus.OK && details) {
-                            phone = details.formatted_phone_number || place.vicinity || "N/A";
+                            phone = details.formatted_phone_number || "N/A";
                             website = details.website || "";
                             fullAddress = details.formatted_address || place.vicinity || "N/A";
                             name = details.name || place.name;
-                        } else {
-                            phone = place.vicinity ? "Phone: not in API" : "N/A";
-                        }
-                        // derive email attempt
-                        if (website && website !== "") {
-                            try {
-                                let domain = new URL(website).hostname.replace('www.', '');
-                                emailGuessed = `contact@${domain}`;
-                            } catch(e) { emailGuessed = ""; }
-                        } else {
-                            // Sometimes we can use name to guess (not perfect but better)
-                            let cleanName = name.toLowerCase().replace(/[^a-z0-9]/g, '');
-                            if (cleanName.length > 3) emailGuessed = `hello@${cleanName}.com`;
-                            else emailGuessed = "";
+                            
+                            if (website && website !== "") {
+                                try {
+                                    let domain = new URL(website).hostname.replace('www.', '');
+                                    emailGuessed = `contact@${domain}`;
+                                } catch(e) { emailGuessed = ""; }
+                            }
                         }
                         resolveDetail({ phone, website, emailGuessed, fullAddress, name });
                     });
                 });
                 
-                const detailInfo = await detailPromise;
-                
                 enrichedResults.push({
-                    id: idx + 1,
                     name: detailInfo.name,
                     address: detailInfo.fullAddress,
-                    phone: detailInfo.phone || "Not provided",
+                    phone: detailInfo.phone,
                     website: detailInfo.website || "-",
-                    email: detailInfo.emailGuessed || "Not found"
+                    email: detailInfo.emailGuessed || "Not available"
                 });
             }
             
             extractedPlacesData = enrichedResults;
             renderTable(extractedPlacesData);
-            statusSpan.innerHTML = `✅ Completed! Found ${extractedPlacesData.length} places for "${keyword}" near ${center.locationName}.`;
+            statusSpan.innerHTML = `✅ Success! Found ${extractedPlacesData.length} places for "${keyword}" near ${center.locationName}.`;
             document.getElementById('downloadBtn').disabled = false;
         });
     }
@@ -543,9 +475,10 @@
     function renderTable(data) {
         const tbody = document.getElementById('tableBody');
         if (!data || data.length === 0) {
-            tbody.innerHTML = `<tr class="no-data"><td colspan="6">No data to display. Try searching.</td></tr>`;
+            tbody.innerHTML = '<tr class="no-data"><td colspan="6">No data to display.</td></tr>';
             return;
         }
+        
         let html = "";
         data.forEach((item, i) => {
             html += `<tr>
@@ -553,8 +486,8 @@
                 <td><strong>${escapeHtml(item.name)}</strong></td>
                 <td>${escapeHtml(item.address)}</td>
                 <td>${escapeHtml(item.phone)}</td>
-                <td>${item.website !== "-" ? `<a href="${escapeHtml(item.website)}" target="_blank">🌐 Visit</a>` : "-"}</td>
-                <td>${escapeHtml(item.email)} <small style="color:#4a6e46;">(derived)</small></td>
+                <td>${item.website !== "-" ? `<a href="${escapeHtml(item.website)}" target="_blank">Visit Website</a>` : "-"}</td>
+                <td>${escapeHtml(item.email)}</td>
             </tr>`;
         });
         tbody.innerHTML = html;
@@ -567,50 +500,39 @@
             if (m === '<') return '&lt;';
             if (m === '>') return '&gt;';
             return m;
-        }).replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, function(c) {
-            return c;
         });
     }
     
-    // Export to Excel / CSV via SheetJS
     function exportToExcel() {
         if (!extractedPlacesData.length) {
             alert("No data to export. Perform a search first.");
             return;
         }
+        
         const exportData = extractedPlacesData.map((item, idx) => ({
             "#": idx+1,
             "Business Name": item.name,
             "Address": item.address,
             "Phone Number": item.phone,
             "Website": item.website,
-            "Email (Extracted/Derived)": item.email
+            "Email": item.email
         }));
+        
         const ws = XLSX.utils.json_to_sheet(exportData);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "GoogleMaps_Extract");
         XLSX.writeFile(wb, `maps_extract_${currentKeyword}_${new Date().toISOString().slice(0,19)}.xlsx`);
     }
     
-    // Event Listeners
-    document.getElementById('searchBtn').addEventListener('click', () => {
-        if (!placesService) {
-            alert("Please wait, API still loading or invalid key.");
-            return;
-        }
-        performExtraction();
-    });
-    
+    // Event listeners
+    document.getElementById('searchBtn').addEventListener('click', performExtraction);
     document.getElementById('downloadBtn').addEventListener('click', exportToExcel);
     
-    // If API key missing but we still have fallback message: disable search button already. we also check again after load.
-    if (API_KEY && API_KEY !== "AIzaSyCBe0av8z-eStU17dap_mYi5PaHGPhoED4") {
-        // good path
-    } else {
-        // re-check for late key? but fine
-    }
-    
-    // Additional: If user manually changes location input we keep placeholder.
+    // Handle script load error
+    window.gm_authFailure = function() {
+        document.getElementById('statusText').innerHTML = "❌ API Key invalid or unauthorized. Please check your API key and enable required APIs.";
+        document.getElementById('statusText').style.color = "#b91c1c";
+    };
 </script>
 
 </body>
