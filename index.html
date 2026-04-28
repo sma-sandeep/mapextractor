@@ -1,539 +1,208 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Google Maps Extractor Pro | Nearby Places Search</title>
-    <!-- Google Maps API with YOUR key -->
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCBe0av8z-eStU17dap_mYi5PaHGPhoED4&libraries=places,geocoding&callback=initMap" async defer></script>
-    <!-- SheetJS (XLSX export) -->
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
-    <!-- Font Awesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Google Maps Extractor Pro</title>
 
-        body {
-            background: linear-gradient(145deg, #f0f4fa 0%, #e6edf4 100%);
-            min-height: 100vh;
-            padding: 30px 24px 50px 24px;
-        }
+<!-- ✅ FIXED API SCRIPT -->
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCBe0av8z-eStU17dap_mYi5PaHGPhoED4&libraries=places&callback=initMap" async defer></script>
 
-        .main-container {
-            max-width: 1400px;
-            margin: 0 auto;
-        }
+<script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
 
-        .glass-card {
-            background: rgba(255, 255, 255, 0.94);
-            backdrop-filter: blur(2px);
-            border-radius: 2rem;
-            box-shadow: 0 20px 35px -12px rgba(0, 0, 0, 0.2);
-            padding: 24px 30px;
-            margin-bottom: 28px;
-            border: 1px solid rgba(255,255,255,0.6);
-        }
-
-        h1 {
-            font-size: 1.8rem;
-            font-weight: 600;
-            background: linear-gradient(135deg, #1a6d3c, #0f4c2d);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-            display: inline-flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        h1 i {
-            background: none;
-            color: #2c7a45;
-            font-size: 2rem;
-        }
-
-        .sub {
-            color: #4a627a;
-            margin-top: 6px;
-            font-size: 0.9rem;
-            border-left: 4px solid #2c7a45;
-            padding-left: 14px;
-        }
-
-        .search-panel {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 16px;
-            align-items: flex-end;
-            margin: 20px 0 15px 0;
-        }
-
-        .input-group {
-            flex: 2;
-            min-width: 220px;
-        }
-
-        .input-group label {
-            display: block;
-            font-weight: 600;
-            font-size: 0.8rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: #1f3b4c;
-            margin-bottom: 6px;
-        }
-
-        .input-group input, .input-group select {
-            width: 100%;
-            padding: 12px 16px;
-            border-radius: 44px;
-            border: 1.5px solid #cfdfed;
-            background: white;
-            font-size: 0.95rem;
-            transition: 0.2s;
-            outline: none;
-        }
-
-        .input-group input:focus, .input-group select:focus {
-            border-color: #2c7a45;
-            box-shadow: 0 0 0 3px rgba(44,122,69,0.2);
-        }
-
-        .btn-group {
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
-
-        .btn {
-            padding: 10px 24px;
-            border-radius: 40px;
-            border: none;
-            font-weight: 600;
-            cursor: pointer;
-            transition: 0.2s;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 0.9rem;
-        }
-
-        .btn-primary {
-            background: #1e6a3b;
-            color: white;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-        }
-
-        .btn-primary:hover {
-            background: #0f552f;
-            transform: translateY(-2px);
-        }
-
-        .btn-download {
-            background: #2c5a7a;
-            color: white;
-        }
-
-        .btn-download:hover {
-            background: #1d4460;
-        }
-
-        .info-status {
-            margin: 15px 0 0 0;
-            font-size: 0.85rem;
-            background: #eef2f7;
-            padding: 10px 16px;
-            border-radius: 40px;
-            display: inline-block;
-        }
-
-        .results-wrapper {
-            background: white;
-            border-radius: 1.8rem;
-            overflow-x: auto;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.05);
-            padding: 5px 0;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.9rem;
-            min-width: 680px;
-        }
-
-        th {
-            background: #1f3b2c;
-            color: white;
-            padding: 14px 12px;
-            font-weight: 600;
-            text-align: left;
-        }
-
-        td {
-            padding: 12px 12px;
-            border-bottom: 1px solid #e2e8f0;
-            vertical-align: top;
-            word-break: break-word;
-        }
-
-        tr:hover {
-            background: #f8fafc;
-        }
-
-        .no-data {
-            text-align: center;
-            padding: 45px;
-            color: #6c86a3;
-            font-style: italic;
-        }
-
-        footer {
-            text-align: center;
-            margin-top: 35px;
-            font-size: 0.75rem;
-            color: #5d6f83;
-        }
-
-        @media (max-width: 700px) {
-            body { padding: 18px; }
-            .glass-card { padding: 18px; }
-            th, td { font-size: 0.8rem; padding: 8px; }
-        }
-    </style>
+<style>
+body{font-family:Arial;padding:20px;background:#f4f6f9}
+input,select,button{padding:10px;margin:5px;border-radius:6px;border:1px solid #ccc}
+button{cursor:pointer;background:#1e6a3b;color:#fff;border:none}
+table{width:100%;border-collapse:collapse;margin-top:20px;background:#fff}
+th,td{padding:10px;border:1px solid #ddd;text-align:left}
+th{background:#1e6a3b;color:#fff}
+</style>
 </head>
+
 <body>
 
-<div class="main-container">
-    <div class="glass-card">
-        <h1><i class="fas fa-map-marker-alt"></i> Google Maps Extractor <span style="font-size: 1rem; background: none; color:#2c7a45;">| Places + Contacts</span></h1>
-        <div class="sub">🔍 Search businesses, restaurants, services → extract Name, Address, Phone, Website, Email</div>
+<h2>Google Maps Extractor</h2>
 
-        <div class="search-panel">
-            <div class="input-group">
-                <label><i class="fas fa-search"></i> What / Category</label>
-                <input type="text" id="searchKeyword" placeholder="e.g., Pizza, Clinic, Hotel, Car repair" value="Coffee shop">
-            </div>
-            <div class="input-group">
-                <label><i class="fas fa-location-dot"></i> Location (city/area or leave empty for 'near me')</label>
-                <input type="text" id="locationInput" placeholder="e.g., New York, Mumbai, London">
-            </div>
-            <div class="input-group">
-                <label><i class="fas fa-arrows-up-down"></i> Radius (meters)</label>
-                <select id="radiusSelect">
-                    <option value="500">500 m</option>
-                    <option value="1000">1 km</option>
-                    <option value="2000" selected>2 km</option>
-                    <option value="5000">5 km</option>
-                </select>
-            </div>
-            <div class="btn-group">
-                <button class="btn btn-primary" id="searchBtn"><i class="fas fa-map-pin"></i> Extract Places</button>
-                <button class="btn btn-download" id="downloadBtn" disabled><i class="fas fa-file-excel"></i> Download Excel</button>
-            </div>
-        </div>
+<input type="text" id="searchKeyword" placeholder="Keyword (e.g. cafe)">
+<input type="text" id="locationInput" placeholder="Location (optional)">
+<select id="radiusSelect">
+<option value="500">500m</option>
+<option value="1000">1km</option>
+<option value="2000">2km</option>
+<option value="5000">5km</option>
+</select>
 
-        <div class="info-status" id="statusArea">
-            <i class="fas fa-info-circle"></i> <span id="statusText">Initializing Google Maps API...</span>
-        </div>
-        <div id="locationHint" style="font-size: 0.75rem; margin-top: 8px;"></div>
-    </div>
+<button onclick="performExtraction()">Extract</button>
+<button onclick="exportToExcel()">Download Excel</button>
 
-    <div class="results-wrapper">
-        <table id="resultTable">
-            <thead>
-                <tr>
-                    <th>#</th>
-                    <th>Business Name</th>
-                    <th>Address</th>
-                    <th>Phone Number</th>
-                    <th>Website</th>
-                    <th>Email (Derived)</th>
-                </tr>
-            </thead>
-            <tbody id="tableBody">
-                <tr class="no-data"><td colspan="6">✨ No data yet. Search for places near you or selected location.</td></tr>
-            </tbody>
-        </table>
-    </div>
-    <footer>
-        <i class="fas fa-globe"></i> Powered by Google Places API | Email derived from website domain
-    </footer>
-</div>
+<p id="statusText">Loading API...</p>
+
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Name</th>
+<th>Address</th>
+<th>Phone</th>
+<th>Website</th>
+<th>Email</th>
+</tr>
+</thead>
+<tbody id="tableBody">
+<tr><td colspan="6">No Data</td></tr>
+</tbody>
+</table>
 
 <script>
-    // GLOBAL VARIABLES
-    let geocoder;
-    let placesService;
-    let extractedPlacesData = [];
-    let currentKeyword = "";
-    let isApiReady = false;
+let map, geocoder, placesService;
+let extractedPlacesData = [];
+let userCoords = null;
 
-    // Function to check if API key is valid (not placeholder)
-    function isApiKeyValid() {
-        // Get the API key from script tag
-        const scripts = document.getElementsByTagName('script');
-        for (let script of scripts) {
-            if (script.src && script.src.includes('maps.googleapis.com/maps/api/js')) {
-                const match = script.src.match(/key=([^&]*)/);
-                if (match && match[1]) {
-                    const key = match[1];
-                    // Check if it's not the placeholder
-                    if (key !== "YOUR_API_KEY_HERE" && key !== "AIzaSyCBe0av8z-eStU17dap_mYi5PaHGPhoED4") {
-                        return true;
-                    }
-                }
-            }
-        }
-        return false;
-    }
+function initMap() {
+    map = new google.maps.Map(document.createElement("div"), {
+        center: { lat: 28.6139, lng: 77.2090 },
+        zoom: 10
+    });
 
-    // Initialize map services
-    window.initMap = function() {
-        console.log("initMap called");
-        
-        if (!isApiKeyValid()) {
-            document.getElementById('statusText').innerHTML = "⚠️ Please replace the API key in the script tag with your actual Google Maps API key";
-            document.getElementById('statusText').style.color = "#b91c1c";
-            document.getElementById('searchBtn').disabled = true;
-            return;
-        }
-        
-        try {
-            geocoder = new google.maps.Geocoder();
-            const dummyDiv = document.createElement('div');
-            placesService = new google.maps.places.PlacesService(dummyDiv);
-            isApiReady = true;
-            
-            document.getElementById('statusText').innerHTML = "✅ API Ready! Enter search details and click Extract Places.";
-            document.getElementById('statusText').style.color = "#156b3a";
-            document.getElementById('searchBtn').disabled = false;
-            
-            // Auto-detect location
-            autoDetectLocation();
-        } catch (error) {
-            console.error("Error initializing:", error);
-            document.getElementById('statusText').innerHTML = "❌ Error loading Google Maps. Check API key and enabled APIs.";
-            document.getElementById('statusText').style.color = "#b91c1c";
-        }
-    };
+    geocoder = new google.maps.Geocoder();
+    placesService = new google.maps.places.PlacesService(map);
 
-    // Auto detect user's location
-    function autoDetectLocation() {
-        if (!navigator.geolocation) return;
-        
-        navigator.geolocation.getCurrentPosition((position) => {
-            const lat = position.coords.latitude;
-            const lng = position.coords.longitude;
-            
-            if (geocoder) {
-                geocoder.geocode({ location: { lat, lng } }, (results, status) => {
-                    if (status === 'OK' && results[0]) {
-                        let address = results[0].formatted_address;
-                        document.getElementById('locationHint').innerHTML = `<i class="fas fa-map-marker-alt"></i> 📍 Current location detected: ${address.substring(0, 60)}`;
-                        document.getElementById('locationInput').placeholder = "Or type custom location";
-                    } else {
-                        document.getElementById('locationHint').innerHTML = `<i class="fas fa-location-dot"></i> Location detected (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
-                    }
-                });
-            }
-            window.userCoords = { lat, lng };
-        }, (err) => {
-            console.log("Geolocation not enabled or error");
-            document.getElementById('locationHint').innerHTML = "<i class='fas fa-info-circle'></i> Enter location or enable GPS for 'near me'";
+    document.getElementById("statusText").innerHTML = "✅ API Ready";
+
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(pos => {
+            userCoords = {
+                lat: pos.coords.latitude,
+                lng: pos.coords.longitude
+            };
         });
     }
+}
 
-    // Get search center coordinates
-    async function getSearchCenter() {
-        const locationText = document.getElementById('locationInput').value.trim();
-        
-        if (locationText !== "") {
-            return new Promise((resolve) => {
-                geocoder.geocode({ address: locationText }, (results, status) => {
-                    if (status === 'OK' && results[0]) {
-                        const loc = results[0].geometry.location;
-                        resolve({ lat: loc.lat(), lng: loc.lng(), locationName: locationText });
-                    } else {
-                        resolve({ lat: 40.7128, lng: -74.0060, locationName: "New York (Default)" });
-                    }
+async function getSearchCenter() {
+    let loc = document.getElementById("locationInput").value.trim();
+
+    if (loc !== "") {
+        return new Promise(resolve => {
+            geocoder.geocode({ address: loc }, (res, status) => {
+                if (status === "OK") {
+                    resolve({
+                        lat: res[0].geometry.location.lat(),
+                        lng: res[0].geometry.location.lng(),
+                        name: loc
+                    });
+                } else {
+                    resolve({ lat: 28.6139, lng: 77.2090, name: "Default Delhi" });
+                }
+            });
+        });
+    } else if (userCoords) {
+        return { lat: userCoords.lat, lng: userCoords.lng, name: "Your Location" };
+    } else {
+        return { lat: 28.6139, lng: 77.2090, name: "Default Delhi" };
+    }
+}
+
+async function performExtraction() {
+    let keyword = document.getElementById("searchKeyword").value.trim();
+    let radius = parseInt(document.getElementById("radiusSelect").value);
+
+    if (!keyword) return alert("Enter keyword");
+
+    let center = await getSearchCenter();
+
+    document.getElementById("statusText").innerHTML = "🔍 Searching...";
+
+    placesService.nearbySearch({
+        location: new google.maps.LatLng(center.lat, center.lng),
+        radius: radius,
+        keyword: keyword
+    }, async (results, status) => {
+
+        if (status !== google.maps.places.PlacesServiceStatus.OK) {
+            document.getElementById("statusText").innerHTML = "❌ No results";
+            return;
+        }
+
+        let finalData = [];
+
+        for (let place of results) {
+
+            let details = await new Promise(resolve => {
+                placesService.getDetails({
+                    placeId: place.place_id,
+                    fields: ["name","formatted_address","formatted_phone_number","website"]
+                }, (res, stat) => {
+
+                    if (stat === google.maps.places.PlacesServiceStatus.OK) {
+
+                        let email = "";
+                        if (res.website) {
+                            try {
+                                let domain = new URL(res.website).hostname.replace("www.","");
+                                email = "contact@" + domain;
+                            } catch {}
+                        }
+
+                        resolve({
+                            name: res.name,
+                            address: res.formatted_address,
+                            phone: res.formatted_phone_number || "N/A",
+                            website: res.website || "-",
+                            email: email || "N/A"
+                        });
+
+                    } else resolve(null);
                 });
             });
-        } else {
-            if (window.userCoords) {
-                return { lat: window.userCoords.lat, lng: window.userCoords.lng, locationName: "Your Current Location" };
-            } else {
-                return new Promise((resolve) => {
-                    if (navigator.geolocation) {
-                        navigator.geolocation.getCurrentPosition((pos) => {
-                            window.userCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-                            resolve({ lat: window.userCoords.lat, lng: window.userCoords.lng, locationName: "Your Location" });
-                        }, () => {
-                            resolve({ lat: 40.7128, lng: -74.0060, locationName: "New York (Default)" });
-                        });
-                    } else {
-                        resolve({ lat: 40.7128, lng: -74.0060, locationName: "New York (Default)" });
-                    }
-                });
-            }
+
+            if (details) finalData.push(details);
         }
+
+        extractedPlacesData = finalData;
+        renderTable(finalData);
+
+        document.getElementById("statusText").innerHTML = "✅ Found " + finalData.length + " results";
+    });
+}
+
+function renderTable(data) {
+    let tbody = document.getElementById("tableBody");
+
+    if (!data.length) {
+        tbody.innerHTML = "<tr><td colspan='6'>No Data</td></tr>";
+        return;
     }
 
-    // Main extraction function
-    async function performExtraction() {
-        if (!isApiReady || !placesService) {
-            alert("Please wait for API to load completely.");
-            return;
-        }
-        
-        const keyword = document.getElementById('searchKeyword').value.trim();
-        if (!keyword) {
-            alert("Please enter a search keyword");
-            return;
-        }
-        
-        currentKeyword = keyword;
-        const radius = parseInt(document.getElementById('radiusSelect').value);
-        const statusSpan = document.getElementById('statusText');
-        statusSpan.innerHTML = `<i class="fas fa-spinner fa-pulse"></i> Searching for "${keyword}"...`;
-        
-        let center = await getSearchCenter();
-        const locationLatLng = new google.maps.LatLng(center.lat, center.lng);
-        document.getElementById('locationHint').innerHTML = `<i class="fas fa-location-crosshairs"></i> Searching near: ${center.locationName}`;
-        
-        const request = {
-            location: locationLatLng,
-            radius: radius,
-            keyword: keyword
-        };
-        
-        placesService.nearbySearch(request, async (results, status) => {
-            if (status !== google.maps.places.PlacesServiceStatus.OK || !results || results.length === 0) {
-                statusSpan.innerHTML = `⚠️ No places found for "${keyword}" near ${center.locationName}. Try different keyword or radius.`;
-                document.getElementById('tableBody').innerHTML = '<tr class="no-data"><td colspan="6">😞 No results found.</td></tr>';
-                extractedPlacesData = [];
-                document.getElementById('downloadBtn').disabled = true;
-                return;
-            }
-            
-            const placesList = results.slice(0, 25);
-            statusSpan.innerHTML = `📡 Fetching details for ${placesList.length} places...`;
-            let enrichedResults = [];
-            
-            for (let idx = 0; idx < placesList.length; idx++) {
-                const place = placesList[idx];
-                
-                const detailInfo = await new Promise((resolveDetail) => {
-                    placesService.getDetails({ 
-                        placeId: place.place_id, 
-                        fields: ['formatted_phone_number', 'website', 'formatted_address', 'name'] 
-                    }, (details, detStatus) => {
-                        let phone = "N/A";
-                        let website = "";
-                        let emailGuessed = "";
-                        let fullAddress = place.vicinity || "Address not available";
-                        let name = place.name || "Unnamed";
-                        
-                        if (detStatus === google.maps.places.PlacesServiceStatus.OK && details) {
-                            phone = details.formatted_phone_number || "N/A";
-                            website = details.website || "";
-                            fullAddress = details.formatted_address || place.vicinity || "N/A";
-                            name = details.name || place.name;
-                            
-                            if (website && website !== "") {
-                                try {
-                                    let domain = new URL(website).hostname.replace('www.', '');
-                                    emailGuessed = `contact@${domain}`;
-                                } catch(e) { emailGuessed = ""; }
-                            }
-                        }
-                        resolveDetail({ phone, website, emailGuessed, fullAddress, name });
-                    });
-                });
-                
-                enrichedResults.push({
-                    name: detailInfo.name,
-                    address: detailInfo.fullAddress,
-                    phone: detailInfo.phone,
-                    website: detailInfo.website || "-",
-                    email: detailInfo.emailGuessed || "Not available"
-                });
-            }
-            
-            extractedPlacesData = enrichedResults;
-            renderTable(extractedPlacesData);
-            statusSpan.innerHTML = `✅ Success! Found ${extractedPlacesData.length} places for "${keyword}" near ${center.locationName}.`;
-            document.getElementById('downloadBtn').disabled = false;
-        });
-    }
-    
-    function renderTable(data) {
-        const tbody = document.getElementById('tableBody');
-        if (!data || data.length === 0) {
-            tbody.innerHTML = '<tr class="no-data"><td colspan="6">No data to display.</td></tr>';
-            return;
-        }
-        
-        let html = "";
-        data.forEach((item, i) => {
-            html += `<tr>
-                <td>${i+1}</td>
-                <td><strong>${escapeHtml(item.name)}</strong></td>
-                <td>${escapeHtml(item.address)}</td>
-                <td>${escapeHtml(item.phone)}</td>
-                <td>${item.website !== "-" ? `<a href="${escapeHtml(item.website)}" target="_blank">Visit Website</a>` : "-"}</td>
-                <td>${escapeHtml(item.email)}</td>
-            </tr>`;
-        });
-        tbody.innerHTML = html;
-    }
-    
-    function escapeHtml(str) {
-        if (!str) return "";
-        return str.replace(/[&<>]/g, function(m) {
-            if (m === '&') return '&amp;';
-            if (m === '<') return '&lt;';
-            if (m === '>') return '&gt;';
-            return m;
-        });
-    }
-    
-    function exportToExcel() {
-        if (!extractedPlacesData.length) {
-            alert("No data to export. Perform a search first.");
-            return;
-        }
-        
-        const exportData = extractedPlacesData.map((item, idx) => ({
-            "#": idx+1,
-            "Business Name": item.name,
-            "Address": item.address,
-            "Phone Number": item.phone,
-            "Website": item.website,
-            "Email": item.email
-        }));
-        
-        const ws = XLSX.utils.json_to_sheet(exportData);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "GoogleMaps_Extract");
-        XLSX.writeFile(wb, `maps_extract_${currentKeyword}_${new Date().toISOString().slice(0,19)}.xlsx`);
-    }
-    
-    // Event listeners
-    document.getElementById('searchBtn').addEventListener('click', performExtraction);
-    document.getElementById('downloadBtn').addEventListener('click', exportToExcel);
-    
-    // Handle script load error
-    window.gm_authFailure = function() {
-        document.getElementById('statusText').innerHTML = "❌ API Key invalid or unauthorized. Please check your API key and enable required APIs.";
-        document.getElementById('statusText').style.color = "#b91c1c";
-    };
+    let html = "";
+
+    data.forEach((d,i)=>{
+        html += `<tr>
+        <td>${i+1}</td>
+        <td>${d.name}</td>
+        <td>${d.address}</td>
+        <td>${d.phone}</td>
+        <td>${d.website !== "-" ? `<a href="${d.website}" target="_blank">Visit</a>` : "-"}</td>
+        <td>${d.email}</td>
+        </tr>`;
+    });
+
+    tbody.innerHTML = html;
+}
+
+function exportToExcel() {
+    if (!extractedPlacesData.length) return alert("No data");
+
+    let ws = XLSX.utils.json_to_sheet(extractedPlacesData);
+    let wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Data");
+
+    XLSX.writeFile(wb, "maps_data.xlsx");
+}
 </script>
 
 </body>
 </html>
+```
