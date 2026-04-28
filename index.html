@@ -13,16 +13,18 @@
 
 <style>
   :root {
-    --bg: #0d0f14;
-    --surface: #151820;
-    --surface2: #1c2030;
-    --border: #252a3a;
-    --accent: #00e5a0;
-    --accent2: #0090ff;
-    --text: #e8eaf0;
-    --muted: #6b7394;
-    --danger: #ff4d6d;
-    --warn: #ffb703;
+    --bg: #f0f4ff;
+    --surface: #ffffff;
+    --surface2: #f5f7ff;
+    --border: #dde3f5;
+    --accent: #2563eb;
+    --accent2: #7c3aed;
+    --accentLight: #eff4ff;
+    --text: #1a1f36;
+    --muted: #6b7280;
+    --danger: #dc2626;
+    --warn: #d97706;
+    --green: #059669;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -35,17 +37,16 @@
     padding: 24px;
   }
 
-  /* Background grid */
+  /* Subtle dot background */
   body::before {
     content: '';
     position: fixed;
     inset: 0;
-    background-image:
-      linear-gradient(rgba(0,229,160,0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(0,229,160,0.03) 1px, transparent 1px);
-    background-size: 40px 40px;
+    background-image: radial-gradient(circle, #c7d2fe 1px, transparent 1px);
+    background-size: 28px 28px;
     pointer-events: none;
     z-index: 0;
+    opacity: 0.45;
   }
 
   .wrap {
@@ -83,9 +84,9 @@
   .badge {
     margin-left: auto;
     font-size: 11px;
-    background: rgba(0,229,160,0.1);
+    background: var(--accentLight);
     color: var(--accent);
-    border: 1px solid rgba(0,229,160,0.25);
+    border: 1px solid #bfdbfe;
     padding: 4px 10px;
     border-radius: 20px;
     letter-spacing: 1px;
@@ -99,6 +100,7 @@
     border-radius: 14px;
     padding: 22px 24px;
     margin-bottom: 20px;
+    box-shadow: 0 2px 16px rgba(37,99,235,0.07);
   }
 
   .search-row {
